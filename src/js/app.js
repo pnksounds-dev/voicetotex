@@ -813,6 +813,20 @@ function setupSettingsListeners() {
     dom.btnClearHistorySettings.addEventListener('click', clearHistoryHandler);
   }
 
+  if (dom.btnEnableHoldHotkey) {
+    dom.btnEnableHoldHotkey.addEventListener('click', () => {
+      const cmd = 'sudo usermod -aG input $USER';
+      const message = `Enable true hold-to-talk on Linux\n\nThis will require admin privileges and a re-login. The app will NOT run anything automatically.\n\nCommand to run in a terminal:\n${cmd}`;
+      showConfirm(message, () => {
+        navigator.clipboard.writeText(cmd).then(() => {
+          showToast('Command copied to clipboard. Run it in a terminal, then re-login.', 'info');
+        }).catch(() => {
+          showToast('Copy failed. Please copy the command manually from the dialog.', 'error');
+        });
+      });
+    });
+  }
+
   // Hotkey recorder
   if (dom.settingInitialPrompt) {
     let promptDebounce = null;
@@ -1264,6 +1278,7 @@ document.addEventListener('DOMContentLoaded', () => {
     transcriptCount:      document.getElementById('transcript-count'),
     wordCount:            document.getElementById('word-count'),
     btnClearHistorySettings: document.getElementById('btn-clear-history-settings'),
+    btnEnableHoldHotkey:  document.getElementById('btn-enable-hold-hotkey'),
     btnShortcuts:         document.getElementById('btn-shortcuts'),
     shortcutsModal:       document.getElementById('shortcuts-modal'),
     btnCloseShortcuts:    document.getElementById('btn-close-shortcuts'),

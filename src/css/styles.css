@@ -1518,6 +1518,26 @@ body[data-state="processing"] .mic-btn::after {
   color: #fff;
 }
 
+.btn-action {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  width: auto;
+  flex-shrink: 0;
+}
+
+.btn-action:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
 /* --- Theme Switcher --- */
 .theme-switcher {
   display: flex;
