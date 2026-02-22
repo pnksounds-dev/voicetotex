@@ -1845,6 +1845,27 @@ body[data-state="loading"] .loading-overlay {
   color: var(--color-recording);
 }
 
+.transcript-text {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.transcript-translation {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+  display: none;
+}
+
+.transcript-translation.visible {
+  display: block;
+}
+
 .crash-title {
   font-size: 18px;
   font-weight: 600;

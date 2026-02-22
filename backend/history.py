@@ -195,6 +195,22 @@ class TranscriptionHistory:
                     return True
             return False
 
+    def set_translation(self, entry_id: str, target: str, text: str) -> bool:
+        """Store a translated text variant for an entry."""
+        if not entry_id or not target:
+            return False
+        with _history_lock:
+            for entry in self._entries:
+                if entry.get("id") == entry_id:
+                    translations = entry.get("translations")
+                    if not isinstance(translations, dict):
+                        translations = {}
+                        entry["translations"] = translations
+                    translations[str(target)] = str(text)
+                    self._save_internal()
+                    return True
+        return False
+
     def annotate(
         self,
         entry_id: str,

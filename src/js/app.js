@@ -225,6 +225,17 @@ function addTranscriptItem(msg) {
   lang.className = 'transcript-lang badge';
   lang.textContent = (msg.language || '').toUpperCase();
 
+  lang.addEventListener('click', () => {
+    const target = dom.translateTarget ? String(dom.translateTarget.value || '') : '';
+    if (!target) {
+      showToast('Select a translation target (next to the mic) first.', 'info');
+      return;
+    }
+    if (!ws || !msg.id) return;
+    showToast(`Translating to ${target.toUpperCase()}…`, 'info');
+    ws.send('translate_entry', { id: msg.id, target });
+  });
+
   // Device badge (CPU/CUDA)
   const device = document.createElement('span');
   device.className = 'transcript-device badge';
@@ -284,6 +295,17 @@ function addTranscriptItem(msg) {
 
   item.appendChild(meta);
   item.appendChild(text);
+
+  const translation = document.createElement('div');
+  translation.className = 'transcript-translation';
+  const existingTranslations = msg.translations && typeof msg.translations === 'object' ? msg.translations : null;
+  const currentTarget = dom.translateTarget ? String(dom.translateTarget.value || '') : '';
+  if (existingTranslations && currentTarget && typeof existingTranslations[currentTarget] === 'string') {
+    translation.textContent = existingTranslations[currentTarget];
+    translation.classList.add('visible');
+  }
+  item.appendChild(translation);
+
   item.appendChild(actions);
 
   // --- Annotation UI (notes + tags) ---
@@ -1114,6 +1136,16 @@ function connectWebSocket(port, authToken = '') {
   ws.on('history_entry_updated', (msg) => {
     updateTranscriptItem(msg.entry);
     refreshAnalysisTabIfActive();
+  });
+
+  ws.on('history_entry_translated', (msg) => {
+    if (!dom.transcriptList || !msg || !msg.id) return;
+    const item = dom.transcriptList.querySelector(`.transcript-item[data-entry-id="${CSS.escape(String(msg.id))}"]`);
+    if (!item) return;
+    const translationEl = item.querySelector('.transcript-translation');
+    if (!translationEl) return;
+    translationEl.textContent = msg.text || '';
+    translationEl.classList.toggle('visible', Boolean((msg.text || '').trim()));
   });
 
   ws.on('close', () => {

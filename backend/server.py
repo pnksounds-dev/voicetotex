@@ -5,11 +5,12 @@ import errno
 import json
 import logging
 import os
-import secrets
-import signal
+import urllib.request
+import urllib.parse
 from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import websockets
@@ -780,6 +781,107 @@ class VoiceToTexServer:
                         await self.broadcast(
                             {"type": "history_entry_updated", "entry": entry}
                         )
+            return
+
+        if action == "translate_entry":
+            entry_id = payload.get("id")
+            target = payload.get("target")
+            if not (
+                isinstance(entry_id, str)
+                and entry_id
+                and isinstance(target, str)
+                and target
+            ):
+                await self._send_json(
+                    websocket,
+                    {"type": "error", "message": "translate_entry requires id and target"},
+                )
+                return
+
+            libre_url = os.environ.get("LIBRETRANSLATE_URL", "").strip().rstrip("/")
+            if not libre_url:
+                await self._send_json(
+                    websocket,
+                    {
+                        "type": "error",
+                        "message": "Translation is not configured. Set LIBRETRANSLATE_URL to a LibreTranslate server.",
+                    },
+                )
+                return
+
+            loop = asyncio.get_running_loop()
+            entry = await loop.run_in_executor(
+                self.executor, lambda: self.history.get_by_id(entry_id)
+            )
+            if not entry:
+                await self._send_json(
+                    websocket,
+                    {"type": "error", "message": "History entry not found"},
+                )
+                return
+
+            source_text = str(entry.get("text", ""))
+            if not source_text.strip():
+                await self._send_json(
+                    websocket,
+                    {"type": "error", "message": "Nothing to translate"},
+                )
+                return
+
+            def _translate_sync() -> str:
+                data = urllib.parse.urlencode(
+                    {
+                        "q": source_text,
+                        "source": "auto",
+                        "target": target,
+                        "format": "text",
+                    }
+                ).encode("utf-8")
+                req = urllib.request.Request(
+                    libre_url + "/translate",
+                    data=data,
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    raw = resp.read().decode("utf-8", errors="replace")
+                parsed = json.loads(raw)
+                translated = parsed.get("translatedText")
+                if not isinstance(translated, str):
+                    raise RuntimeError("Invalid translation response")
+                return translated
+
+            try:
+                translated_text = await loop.run_in_executor(
+                    self.executor, _translate_sync
+                )
+            except Exception as exc:
+                await self._send_json(
+                    websocket,
+                    {"type": "error", "message": f"Translation failed: {exc}"},
+                )
+                return
+
+            _ = await loop.run_in_executor(
+                self.executor,
+                lambda: self.history.set_translation(entry_id, target, translated_text),
+            )
+            updated_entry = await loop.run_in_executor(
+                self.executor, lambda: self.history.get_by_id(entry_id)
+            )
+
+            await self.broadcast(
+                {
+                    "type": "history_entry_translated",
+                    "id": entry_id,
+                    "target": target,
+                    "text": translated_text,
+                }
+            )
+            if updated_entry is not None:
+                await self.broadcast(
+                    {"type": "history_entry_updated", "entry": updated_entry}
+                )
             return
 
         if action == "get_tags":
