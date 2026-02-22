@@ -544,6 +544,16 @@ function updateConfigUI(config) {
 
   if (config.theme) {
     applyTheme(config.theme);
+  } else {
+    // Fallback: use system theme if no saved preference
+    (async () => {
+      try {
+        const systemTheme = await window.api.getSystemTheme();
+        applyTheme(systemTheme);
+      } catch {
+        applyTheme('dark');
+      }
+    })();
   }
 
   // Update header badges

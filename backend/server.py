@@ -481,6 +481,9 @@ class VoiceToTexServer:
 
         if text:
             await self._inject_text(text)
+            # Determine actual device from transcriber
+            actual_device = getattr(self.transcriber, '_device', 'unknown')
+            device_tag = f"device: {actual_device}"
             entry_id = await loop.run_in_executor(
                 self.executor,
                 lambda: self.history.add(
@@ -489,6 +492,7 @@ class VoiceToTexServer:
                     duration,
                     model_name,
                     segments=segments_data,
+                    tags=[device_tag],
                 ),
             )
 

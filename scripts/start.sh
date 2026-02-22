@@ -7,7 +7,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 VENV_PYTHON="$PROJECT_DIR/backend/.venv/bin/python"
 
 if [ -f "$VENV_PYTHON" ]; then
-    export VOICETOTEX_PYTHON="$(realpath "$VENV_PYTHON")"
+    export VOICETOTEX_PYTHON="$VENV_PYTHON"
 elif command -v python3 &> /dev/null; then
     export VOICETOTEX_PYTHON="$(command -v python3)"
 elif command -v python &> /dev/null; then

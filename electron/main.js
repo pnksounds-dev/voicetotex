@@ -80,7 +80,39 @@ if (!gotLock) {
   app.whenReady().then(startup);
 }
 
+function detectSystemTheme() {
+  try {
+    // Try GNOME/gsettings (Cinnamon, GNOME, MATE, etc.)
+    const result = spawnSync('gsettings', ['get', 'org.gnome.desktop.interface', 'gtk-theme'], {
+      encoding: 'utf8', timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    if (result.status === 0) {
+      const theme = result.stdout.toLowerCase();
+      // Heuristic: if theme name contains 'light', assume light; otherwise dark
+      return theme.includes('light') ? 'light' : 'dark';
+    }
+  } catch {}
+
+  try {
+    // Try KDE Plasma
+    const result = spawnSync('plasma-apply-colorscheme', ['--list'], {
+      encoding: 'utf8', timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    if (result.status === 0) {
+      // Plasma doesn’t expose current scheme easily; fallback to dark
+      return 'dark';
+    }
+  } catch {}
+
+  // Fallback: dark
+  return 'dark';
+}
+
 function startup() {
+  // Detect system theme and store it for the renderer
+  const systemTheme = detectSystemTheme();
+  global.systemTheme = systemTheme;
+
   createMainWindow();
   createTray(mainWindow);
   createOverlay(mainWindow);
@@ -434,8 +466,8 @@ ipcMain.handle('get-config', () => ({}));
 ipcMain.handle('set-config', (_event, _key, _value) => true);
 ipcMain.handle('get-audio-devices', () => []);
 ipcMain.handle('get-history', () => []);
-ipcMain.handle('send-command', (_event, _action, _data) => null);
 ipcMain.handle('get-backend-status', () => latestBackendStatus);
+ipcMain.handle('get-system-theme', () => global.systemTheme || 'dark');
 
 ipcMain.handle('export-file', async (_event, content, defaultName) => {
   if (!mainWindow || mainWindow.isDestroyed()) return false;

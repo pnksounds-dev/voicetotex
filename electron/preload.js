@@ -35,6 +35,9 @@ contextBridge.exposeInMainWorld('api', {
   getHistory: () => ipcRenderer.invoke('get-history'),
   getBackendStatus: () => ipcRenderer.invoke('get-backend-status'),
 
+  // --- System info ---
+  getSystemTheme: () => ipcRenderer.invoke('get-system-theme'),
+
   // --- Window controls ---
   restartBackend: () => ipcRenderer.send('restart-backend'),
   minimizeWindow: () => ipcRenderer.send('window-minimize'),
