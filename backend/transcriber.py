@@ -60,6 +60,17 @@ class Transcriber:
                 actual_compute = "int8"
             logger.info("Auto device detection: selected %s", actual_device)
 
+        # Adjust compute_type for CUDA compatibility
+        if actual_device == "cuda" and actual_compute == "float16":
+            try:
+                import ctranslate2
+                cuda_types = ctranslate2.get_supported_compute_types("cuda")
+                if "float16" not in cuda_types:
+                    logger.warning("float16 not supported on this CUDA device; falling back to float32")
+                    actual_compute = "float32"
+            except Exception:
+                pass
+
         try:
             new_model = WhisperModel(
                 model_name,
