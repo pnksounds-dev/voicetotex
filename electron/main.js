@@ -42,6 +42,7 @@ let latestBackendStatus = { status: 'starting' };
 
 let registeredHotkey = null;
 let hotkeyToggleOn = false;
+let warnedHoldFallback = false;
 
 function backendHotkeyToAccelerator(combo) {
   if (!combo || typeof combo !== 'string') return null;
@@ -64,6 +65,7 @@ function registerGlobalHotkey(combo, mode) {
   } catch {}
   registeredHotkey = null;
   hotkeyToggleOn = false;
+  warnedHoldFallback = false;
 
   const accelerator = backendHotkeyToAccelerator(combo);
   if (!accelerator) return false;
@@ -77,7 +79,13 @@ function registerGlobalHotkey(combo, mode) {
     } else {
       hotkeyToggleOn = !hotkeyToggleOn;
       sendToRenderer('tray-command', hotkeyToggleOn ? 'start-recording' : 'stop-recording');
-      sendToRenderer('backend-status', { status: 'error', message: 'Hold-to-talk hotkey requires /dev/input permissions; using toggle fallback.' });
+      if (!warnedHoldFallback) {
+        warnedHoldFallback = true;
+        sendToRenderer('backend-status', {
+          status: 'error',
+          message: "Hold-to-talk hotkey requires /dev/input permissions; using toggle fallback. To enable true hold-to-talk on Linux, add your user to the 'input' group and re-login.",
+        });
+      }
     }
   });
 
