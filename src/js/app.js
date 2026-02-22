@@ -553,6 +553,10 @@ function updateConfigUI(config) {
     dom.settingDevice.value = config.audio_device;
   }
 
+  if (config.accent != null) {
+    applyAccent(config.accent);
+  }
+
   if (config.theme && config.theme !== 'system') {
     applyTheme(config.theme);
   } else {
@@ -763,6 +767,28 @@ function setupSettingsListeners() {
     });
   }
 
+  // Accent presets + color picker
+  const accentPresets = document.getElementById('accent-presets');
+  if (accentPresets) {
+    accentPresets.addEventListener('click', (e) => {
+      const btn = e.target.closest('.accent-preset');
+      if (!btn) return;
+      const accent = btn.dataset.accent;
+      applyAccent(accent);
+      if (ws) ws.send('set_config', { key: 'accent', value: accent });
+    });
+  }
+
+  const accentPicker = document.getElementById('accent-picker');
+  if (accentPicker) {
+    accentPicker.addEventListener('input', () => {
+      applyAccent(accentPicker.value);
+    });
+    accentPicker.addEventListener('change', () => {
+      if (ws) ws.send('set_config', { key: 'accent', value: accentPicker.value });
+    });
+  }
+
   // Clear history (both Transcripts toolbar and Settings page buttons)
   const clearHistoryHandler = () => {
     showConfirm('Clear all transcription history?', () => {
@@ -957,6 +983,31 @@ function applyTheme(theme) {
     waveform.setColor(STATE_COLORS[currentState]);
     waveform.updateAccentColor(); // Refresh to pick up new CSS accent
   }
+}
+
+function applyAccent(accent) {
+  const root = document.documentElement;
+  const value = (accent || '').toString().trim();
+  if (value && /^#[0-9a-fA-F]{6}$/.test(value)) {
+    root.style.setProperty('--accent', value);
+  } else {
+    root.style.removeProperty('--accent');
+  }
+
+  if (waveform) {
+    waveform.updateAccentColor();
+  }
+
+  const picker = document.getElementById('accent-picker');
+  if (picker && value && /^#[0-9a-fA-F]{6}$/.test(value)) {
+    picker.value = value;
+  }
+
+  const presets = document.querySelectorAll('.accent-preset');
+  presets.forEach((btn) => {
+    const btnAccent = (btn.dataset.accent || '').toLowerCase();
+    btn.classList.toggle('active', value && btnAccent === value.toLowerCase());
+  });
 }
 
 /* ------------------------------------------------------------------ */

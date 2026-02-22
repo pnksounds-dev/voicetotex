@@ -24,6 +24,7 @@ DEFAULTS = {
     "websocket_port": 8765,
     "initial_prompt": "",
     "theme": "system",
+    "accent": "",
     "max_history": 100,
     "max_recording_seconds": 300,
 }
@@ -106,6 +107,14 @@ def _validate_value(key: str, value: object) -> bool:
         return isinstance(value, str)
     elif key == "theme":
         return value in VALID_THEMES
+    elif key == "accent":
+        if not isinstance(value, str):
+            return False
+        if value == "":
+            return True
+        if len(value) != 7 or not value.startswith("#"):
+            return False
+        return all(c in "0123456789abcdefABCDEF" for c in value[1:])
     return True
 
 
