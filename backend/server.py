@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import secrets
+import signal
 import urllib.request
 import urllib.parse
 from collections.abc import Mapping
