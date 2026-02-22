@@ -188,6 +188,10 @@ class VoiceToTexServer:
             await self.broadcast({"type": "model_info", **model_info})
             await self._set_state("ready", "Ready")
 
+            # Also send a device status update for UI badge
+            actual_device = getattr(self.transcriber, '_device', 'unknown')
+            await self.broadcast({"type": "device_update", "device": actual_device})
+
     async def _set_state(self, state: str, message: str = "") -> None:
         if state not in VALID_STATES:
             raise ValueError(f"Invalid server state: {state}")

@@ -85,6 +85,17 @@ export class WaveformVisualizer {
   /*  Public API                                                        */
   /* ------------------------------------------------------------------ */
 
+  updateAccentColor() {
+    const style = getComputedStyle(document.documentElement);
+    const accent = style.getPropertyValue('--accent').trim();
+    this._barColor = accent + 'dd';
+    const hex = accent.replace('#', '');
+    this._colorR = parseInt(hex.slice(0, 2), 16);
+    this._colorG = parseInt(hex.slice(2, 4), 16);
+    this._colorB = parseInt(hex.slice(4, 6), 16);
+    this._gradientDirty = true;
+  }
+
   pushLevel(rms) {
     const clamped = Math.max(0, Math.min(1, rms));
     const eased = easeOutQuad(clamped);

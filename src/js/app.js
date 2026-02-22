@@ -944,6 +944,7 @@ function applyTheme(theme) {
 
   if (waveform) {
     waveform.setColor(STATE_COLORS[currentState]);
+    waveform.updateAccentColor(); // Refresh to pick up new CSS accent
   }
 }
 
@@ -998,6 +999,12 @@ function connectWebSocket(port, authToken = '') {
 
   ws.on('config', (msg) => {
     updateConfigUI(msg.data);
+  });
+
+  ws.on('device_update', (msg) => {
+    if (dom.deviceBadge && msg.device) {
+      dom.deviceBadge.textContent = msg.device.toUpperCase();
+    }
   });
 
   ws.on('history', (msg) => {
@@ -1140,45 +1147,17 @@ document.addEventListener('DOMContentLoaded', () => {
   dom = {
     micBtn:               document.getElementById('mic-btn'),
     waveformCanvas:       document.getElementById('waveform'),
-    transcriptList:       document.getElementById('transcript-list'),
-    stateDot:             document.querySelector('.state-dot'),
-    stateLabel:           document.querySelector('.state-label'),
-    langBadge:            document.getElementById('lang-badge'),
-    modelBadge:           document.getElementById('model-badge'),
-    tabBtns:              document.querySelectorAll('.tab-btn'),
-    tabPanels:            document.querySelectorAll('.tab-panel'),
-    transcriptPreview:    document.getElementById('transcript-preview'),
-    loadingOverlay:       document.getElementById('loading-overlay'),
-    loadingText:          document.querySelector('.loading-text'),
-    progressFill:         document.getElementById('progress-fill'),
-    btnMinimize:          document.getElementById('btn-minimize'),
-    btnClose:             document.getElementById('btn-close'),
-    settingModel:         document.getElementById('setting-model'),
-    settingLanguage:      document.getElementById('setting-language'),
-    settingDevice:        document.getElementById('setting-device'),
-    settingVad:           document.getElementById('setting-vad'),
-    vadValue:             document.getElementById('vad-value'),
     settingNoiseReduction: document.getElementById('setting-noise-reduction'),
-    settingBeam:          document.getElementById('setting-beam'),
-    beamValue:            document.getElementById('beam-value'),
-    btnClearHistory:      document.getElementById('btn-clear-history'),
-    hotkeyRecorder:       document.getElementById('hotkey-recorder'),
-    hotkeyRecorderKeys:   document.getElementById('hotkey-recorder-keys'),
-    hotkeyHint:           document.querySelector('.hotkey-hint'),
     settingInitialPrompt: document.getElementById('setting-initial-prompt'),
-    connectionDot:        document.getElementById('connection-dot'),
-    connectionLabel:      document.getElementById('connection-label'),
-    transcriptSearch:     document.getElementById('transcript-search'),
-    btnExport:            document.getElementById('btn-export'),
-    exportDropdown:       document.getElementById('export-dropdown'),
-    exportMenu:           document.getElementById('export-menu'),
-    crashOverlay:         document.getElementById('crash-overlay'),
-    crashMessage:         document.getElementById('crash-message'),
-    btnCrashRetry:        document.getElementById('btn-crash-retry'),
-    studioState:          document.getElementById('studio-state'),
-    studioConnection:     document.getElementById('studio-connection'),
-    studioHotkeyMode:     document.getElementById('studio-hotkey-mode'),
-    trackMeterInput:      document.getElementById('track-meter-input'),
+    settingOutputMode: document.querySelectorAll('input[name="output-mode"]'),
+    settingHotkeyMode: document.querySelectorAll('input[name="hotkey-mode"]'),
+    settingHotkeyRecorder: document.getElementById('setting-hotkey-recorder'),
+    micBtn: document.getElementById('mic-btn'),
+    langBadge: document.getElementById('lang-badge'),
+    modelBadge: document.getElementById('model-badge'),
+    deviceBadge: document.getElementById('device-badge'),
+    transcriptPreview: document.getElementById('transcript-preview'),
+    trackMeterInput: document.getElementById('track-meter-input'),
     trackMeterProcessing: document.getElementById('track-meter-processing'),
     trackMeterOutput:     document.getElementById('track-meter-output'),
     transcriptCount:      document.getElementById('transcript-count'),
