@@ -56,7 +56,7 @@ body {
 }
 
 body[data-state="ready"] .overlay-dot {
-  background: #2ecc71;
+  background: #ff6b9d;
 }
 
 body[data-state="recording"] .overlay-dot {

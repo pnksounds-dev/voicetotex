@@ -34,10 +34,16 @@ export class WaveformVisualizer {
     this._canvas = canvas;
     this._ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
 
-    this._barColor = 'rgba(255, 68, 68, 0.85)';
-    this._colorR = 255;
-    this._colorG = 68;
-    this._colorB = 68;
+    // Use CSS accent color for waveform
+    const style = getComputedStyle(document.documentElement);
+    const accent = style.getPropertyValue('--accent').trim();
+    this._barColor = accent + 'dd'; // add alpha
+
+    // Parse accent to RGB for canvas use
+    const hex = accent.replace('#', '');
+    this._colorR = parseInt(hex.slice(0, 2), 16);
+    this._colorG = parseInt(hex.slice(2, 4), 16);
+    this._colorB = parseInt(hex.slice(4, 6), 16);
     this._colorA = 0.85;
 
     this._cssWidth = 0;
