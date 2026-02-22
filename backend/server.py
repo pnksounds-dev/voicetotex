@@ -466,7 +466,10 @@ class VoiceToTexServer:
             return
 
         raw_text = str(result.get("text", "")).strip()
-        language_out = str(result.get("language", language))
+        language_out = str(result.get("language", language)).strip()
+        if not language_out or language_out == "auto":
+            language_out = "und" if language == "auto" else language
+        language_probability = _to_float(result.get("language_probability", 0.0), 0.0)
         text = self.postprocessor.process(raw_text, language=language_out)
         duration = _to_float(result.get("duration", 0.0), 0.0)
         model_name = str(self.config.get("model", ""))
@@ -514,6 +517,7 @@ class VoiceToTexServer:
                 "id": str(entry_id),
                 "text": text,
                 "language": language_out,
+                "language_probability": language_probability,
                 "duration": duration,
                 "device": actual_device,
                 "timestamp": datetime.now().isoformat(),

@@ -187,7 +187,20 @@ class Transcriber:
                 }
             )
 
-        language_out = getattr(info, "language", language if language != "auto" else "")
+        detected_language = getattr(info, "language", None)
+        if isinstance(detected_language, str):
+            detected_language = detected_language.strip()
+        else:
+            detected_language = ""
+
+        if language != "auto":
+            language_out = language
+        else:
+            # In auto mode we prefer the model's detected language. If for some
+            # reason it isn't available, return 'und' (undetermined) rather than
+            # an empty string.
+            language_out = detected_language or "und"
+
         language_probability = float(getattr(info, "language_probability", 0.0) or 0.0)
         duration = getattr(info, "duration", None)
         if duration is None:
