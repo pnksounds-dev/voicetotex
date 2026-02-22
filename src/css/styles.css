@@ -1153,8 +1153,10 @@ body[data-state="processing"] .mic-btn::after {
   flex: 0 0 auto;
   min-height: auto;
   width: 100%;
-  max-width: 640px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
+  padding-left: 24px;
+  padding-right: 24px;
   perspective: 1000px;
 }
 
