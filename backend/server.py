@@ -722,8 +722,13 @@ class VoiceToTexServer:
                     self.executor, lambda: self.history.update(entry_id, cleaned_text)
                 )
                 if updated:
-                    entries = self.history.get_all()
-                    await self.broadcast({"type": "history", "entries": entries})
+                    entry = await loop.run_in_executor(
+                        self.executor, lambda: self.history.get_by_id(entry_id)
+                    )
+                    if entry is not None:
+                        await self.broadcast(
+                            {"type": "history_entry_updated", "entry": entry}
+                        )
                 else:
                     await self._send_json(
                         websocket,
@@ -768,8 +773,13 @@ class VoiceToTexServer:
                     ),
                 )
                 if annotated:
-                    entries = self.history.get_all()
-                    await self.broadcast({"type": "history", "entries": entries})
+                    entry = await loop.run_in_executor(
+                        self.executor, lambda: self.history.get_by_id(entry_id)
+                    )
+                    if entry is not None:
+                        await self.broadcast(
+                            {"type": "history_entry_updated", "entry": entry}
+                        )
             return
 
         if action == "get_tags":

@@ -218,57 +218,7 @@ function addTranscriptItem(msg) {
   // Text
   const text = document.createElement('span');
   text.className = 'transcript-text';
-  text.setAttribute('contenteditable', 'plaintext-only');
-  text.setAttribute('spellcheck', 'false');
   text.textContent = msg.text || '';
-
-  let savedText = msg.text || '';
-  let textSaveTimer = null;
-
-  function flushTextSave() {
-    if (textSaveTimer) {
-      clearTimeout(textSaveTimer);
-      textSaveTimer = null;
-    }
-    const newText = text.textContent.trim();
-    if (!newText) {
-      text.textContent = savedText;
-      return;
-    }
-    if (newText !== savedText && ws && msg.id) {
-      savedText = newText;
-      ws.send('update_history_entry', { id: msg.id, text: newText });
-    }
-  }
-
-  text.addEventListener('focus', () => {
-    savedText = text.textContent;
-    item.classList.add('editing');
-  });
-  text.addEventListener('input', () => {
-    if (textSaveTimer) clearTimeout(textSaveTimer);
-    textSaveTimer = setTimeout(() => {
-      flushTextSave();
-    }, 450);
-  });
-  text.addEventListener('blur', () => {
-    item.classList.remove('editing');
-    flushTextSave();
-  });
-  text.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      text.blur();
-    }
-    if (e.key === 'Escape') {
-      if (textSaveTimer) {
-        clearTimeout(textSaveTimer);
-        textSaveTimer = null;
-      }
-      text.textContent = savedText;
-      text.blur();
-    }
-  });
 
   // Language badge
   const lang = document.createElement('span');
@@ -410,6 +360,39 @@ function addTranscriptItem(msg) {
 
   updateTranscriptPreview(msg);
   updateTranscriptCount();
+}
+
+function updateTranscriptItem(entry) {
+  if (!entry || !dom.transcriptList) return;
+  const id = entry.id || entry.entryId || entry.entry_id;
+  if (!id) return;
+
+  const item = dom.transcriptList.querySelector(`.transcript-item[data-entry-id="${CSS.escape(String(id))}"]`);
+  if (!item) return;
+
+  const active = document.activeElement;
+
+  const textEl = item.querySelector('.transcript-text');
+  if (textEl && typeof entry.text === 'string') {
+    // Don't stomp user selection if they somehow are selecting text.
+    if (active !== textEl) textEl.textContent = entry.text;
+  }
+
+  const notesEl = item.querySelector('.annotation-notes');
+  if (notesEl && typeof entry.notes === 'string') {
+    if (active !== notesEl) notesEl.value = entry.notes;
+  }
+
+  const tagsWrap = item.querySelector('.annotation-tags');
+  if (tagsWrap && Array.isArray(entry.tags)) {
+    // Preserve the tag input element if present
+    const tagInput = tagsWrap.querySelector('.annotation-tag-input');
+    tagsWrap.innerHTML = '';
+    for (const tag of entry.tags) {
+      if (typeof tag === 'string') tagsWrap.appendChild(createTagPill(tag, tagsWrap, String(id)));
+    }
+    if (tagInput) tagsWrap.appendChild(tagInput);
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1126,6 +1109,11 @@ function connectWebSocket(port, authToken = '') {
     ws.send('get_history');
     ws.send('get_devices');
     ws.send('get_rewards');
+  });
+
+  ws.on('history_entry_updated', (msg) => {
+    updateTranscriptItem(msg.entry);
+    refreshAnalysisTabIfActive();
   });
 
   ws.on('close', () => {

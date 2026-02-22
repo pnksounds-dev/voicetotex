@@ -149,6 +149,16 @@ class TranscriptionHistory:
         with _history_lock:
             return list(reversed(self._entries))
 
+    def get_by_id(self, entry_id: str) -> dict[str, object] | None:
+        """Get a single history entry by id."""
+        if not entry_id:
+            return None
+        with _history_lock:
+            for entry in self._entries:
+                if entry.get("id") == entry_id:
+                    return dict(entry)
+        return None
+
     def delete(self, entry_id: str) -> bool:
         """Delete a history entry by ID.
 
