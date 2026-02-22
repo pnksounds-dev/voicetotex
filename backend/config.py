@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 DEFAULTS = {
     "model": "large-v3-turbo",
     "language": "auto",
+    "translate_target": "",
     "device": "cuda",
     "compute_type": "float16",
     "beam_size": 5,
@@ -79,6 +80,8 @@ def _validate_value(key: str, value: object) -> bool:
         return isinstance(value, int) and 1 <= value <= 10
     elif key == "language":
         return value in VALID_LANGUAGES
+    elif key == "translate_target":
+        return value == "" or value in VALID_LANGUAGES
     elif key == "device":
         return value in VALID_DEVICES
     elif key == "compute_type":

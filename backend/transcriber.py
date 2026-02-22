@@ -156,6 +156,7 @@ class Transcriber:
                 "compression_ratio_threshold": 2.4,
                 "condition_on_previous_text": False,
                 "temperature": 0.0,
+                "task": "transcribe",
             }
 
             if language != "auto":

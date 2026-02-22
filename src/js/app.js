@@ -46,6 +46,14 @@ function setTrackMeter(el, value) {
   el.style.width = `${pct}%`;
 }
 
+function setupTransportListeners() {
+  if (dom.translateTarget) {
+    dom.translateTarget.addEventListener('change', () => {
+      if (ws) ws.send('set_config', { key: 'translate_target', value: dom.translateTarget.value });
+    });
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /*  setState                                                           */
 /* ------------------------------------------------------------------ */
@@ -501,6 +509,10 @@ function updateConfigUI(config) {
   if (config.language && dom.settingLanguage) {
     dom.settingLanguage.value = config.language;
     configLanguage = config.language;
+  }
+  if (dom.translateTarget) {
+    const val = (config.translate_target != null) ? String(config.translate_target) : '';
+    dom.translateTarget.value = val;
   }
   if (config.output_mode) {
     const radio = document.querySelector(`input[name="output-mode"][value="${config.output_mode}"]`);
@@ -1237,6 +1249,7 @@ document.addEventListener('DOMContentLoaded', () => {
     stateDot:             document.querySelector('.state-dot'),
     stateLabel:           document.querySelector('.state-label'),
     langBadge:            document.getElementById('lang-badge'),
+    translateTarget:      document.getElementById('translate-target'),
     modelBadge:           document.getElementById('model-badge'),
     deviceBadge:          document.getElementById('device-badge'),
     tabBtns:              document.querySelectorAll('.tab-btn'),
@@ -1438,6 +1451,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---- Settings change listeners ----
   setupSettingsListeners();
+  setupTransportListeners();
 
   if (dom.btnExport) {
     dom.btnExport.addEventListener('click', (e) => {
