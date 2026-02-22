@@ -307,14 +307,14 @@ else
 fi
 
 info "Installing Python packages..."
-"$VENV_DIR/bin/pip" install --upgrade pip -q 2>/dev/null
-"$VENV_DIR/bin/pip" install -r "$PROJECT_DIR/backend/requirements.txt" -q 2>/dev/null
+"$VENV_DIR/bin/pip" install --upgrade pip
+"$VENV_DIR/bin/pip" install -r "$PROJECT_DIR/backend/requirements.txt"
 ok "Python packages installed"
 
 printf "\n${BOLD}[5/6] Node.js Packages${NC}\n"
 info "Running npm install..."
 cd "$PROJECT_DIR"
-npm install --silent 2>/dev/null
+npm install
 ok "Node packages installed"
 
 printf "\n${BOLD}[6/6] Input Group Check${NC}\n"

@@ -31,7 +31,8 @@ if [ -n "$NVIDIA_CUBLAS_DIR" ]; then
 fi
 
 export ELECTRON_OZONE_PLATFORM_HINT=auto
-export ELECTRON_ENABLE_LOGGING=0
+export ELECTRON_ENABLE_LOGGING=1
+export ELECTRON_DEBUG=1
 
 cd "$PROJECT_DIR"
 exec npx electron .
