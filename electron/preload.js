@@ -30,6 +30,9 @@ contextBridge.exposeInMainWorld('api', {
   getConfig: () => ipcRenderer.invoke('get-config'),
   setConfig: (key, value) => ipcRenderer.invoke('set-config', key, value),
 
+  // --- Hotkey (Electron globalShortcut fallback) ---
+  setHotkey: (combo, mode) => ipcRenderer.invoke('set-hotkey', combo, mode),
+
   // --- Data ---
   getAudioDevices: () => ipcRenderer.invoke('get-audio-devices'),
   getHistory: () => ipcRenderer.invoke('get-history'),

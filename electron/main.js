@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn, spawnSync, execSync } = require('child_process');
@@ -38,7 +38,52 @@ const STARTUP_TIMEOUT_MS = 120_000;
 let isQuitting = false;
 let isSpawning = false;
 let startupTimer = null;
-let latestBackendStatus = { status: 'loading', message: 'Initializing' };
+let latestBackendStatus = { status: 'starting' };
+
+let registeredHotkey = null;
+let hotkeyToggleOn = false;
+
+function backendHotkeyToAccelerator(combo) {
+  if (!combo || typeof combo !== 'string') return null;
+  const tokens = combo.split('+').map(t => t.trim().toLowerCase()).filter(Boolean);
+  if (tokens.length === 0) return null;
+  const mapped = tokens.map((t) => {
+    if (t === 'ctrl' || t === 'control') return 'CommandOrControl';
+    if (t === 'shift') return 'Shift';
+    if (t === 'alt') return 'Alt';
+    if (t === 'super' || t === 'meta') return 'Super';
+    if (t === 'space') return 'Space';
+    return t.length === 1 ? t.toUpperCase() : t;
+  });
+  return mapped.join('+');
+}
+
+function registerGlobalHotkey(combo, mode) {
+  try {
+    globalShortcut.unregisterAll();
+  } catch {}
+  registeredHotkey = null;
+  hotkeyToggleOn = false;
+
+  const accelerator = backendHotkeyToAccelerator(combo);
+  if (!accelerator) return false;
+
+  const effectiveMode = (mode === 'toggle') ? 'toggle' : 'hold';
+  const ok = globalShortcut.register(accelerator, () => {
+    // globalShortcut cannot detect key-up reliably; treat as toggle.
+    if (effectiveMode === 'toggle') {
+      hotkeyToggleOn = !hotkeyToggleOn;
+      sendToRenderer('tray-command', hotkeyToggleOn ? 'start-recording' : 'stop-recording');
+    } else {
+      hotkeyToggleOn = !hotkeyToggleOn;
+      sendToRenderer('tray-command', hotkeyToggleOn ? 'start-recording' : 'stop-recording');
+      sendToRenderer('backend-status', { status: 'error', message: 'Hold-to-talk hotkey requires /dev/input permissions; using toggle fallback.' });
+    }
+  });
+
+  if (ok) registeredHotkey = accelerator;
+  return ok;
+}
 
 function sendBackendStatus(data) {
   latestBackendStatus = { ...latestBackendStatus, ...data };
@@ -479,6 +524,10 @@ ipcMain.handle('get-audio-devices', () => []);
 ipcMain.handle('get-history', () => []);
 ipcMain.handle('get-backend-status', () => latestBackendStatus);
 ipcMain.handle('get-system-theme', () => global.systemTheme || 'dark');
+
+ipcMain.handle('set-hotkey', (_event, combo, mode) => {
+  return registerGlobalHotkey(combo, mode);
+});
 
 ipcMain.handle('export-file', async (_event, content, defaultName) => {
   if (!mainWindow || mainWindow.isDestroyed()) return false;

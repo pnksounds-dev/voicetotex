@@ -513,6 +513,11 @@ function updateConfigUI(config) {
     if (dom.studioHotkeyMode) {
       dom.studioHotkeyMode.textContent = config.hotkey_mode.charAt(0).toUpperCase() + config.hotkey_mode.slice(1);
     }
+
+    if (window.api && window.api.setHotkey) {
+      const hotkeyCombo = config.hotkey || (config.get && config.get('hotkey'));
+      if (hotkeyCombo) window.api.setHotkey(hotkeyCombo, config.hotkey_mode).catch(() => {});
+    }
   }
   if (config.vad_threshold != null && dom.settingVad) {
     dom.settingVad.value = Math.round(config.vad_threshold * 100);
@@ -530,6 +535,11 @@ function updateConfigUI(config) {
     const display = formatHotkeyDisplay(config.hotkey);
     if (dom.hotkeyRecorderKeys) dom.hotkeyRecorderKeys.textContent = display;
     if (dom.hotkeyHint) dom.hotkeyHint.textContent = display;
+
+    // Electron globalShortcut fallback (works without /dev/input permissions)
+    if (window.api && window.api.setHotkey) {
+      window.api.setHotkey(config.hotkey, config.hotkey_mode || hotkeyMode).catch(() => {});
+    }
   }
 
   if (config.available_models && Array.isArray(config.available_models) && dom.settingModel) {
