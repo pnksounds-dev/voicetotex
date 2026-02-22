@@ -267,6 +267,16 @@ function addTranscriptItem(msg) {
   lang.className = 'transcript-lang badge';
   lang.textContent = (msg.language || '').toUpperCase();
 
+  // Device badge (CPU/CUDA)
+  const device = document.createElement('span');
+  device.className = 'transcript-device badge';
+  let deviceValue = (msg.device || '').toString().trim();
+  if (!deviceValue && Array.isArray(msg.tags)) {
+    const found = msg.tags.find(t => typeof t === 'string' && t.toLowerCase().startsWith('device:'));
+    if (found) deviceValue = found.split(':').slice(1).join(':').trim();
+  }
+  device.textContent = deviceValue ? deviceValue.toUpperCase() : 'CPU';
+
   const duration = document.createElement('span');
   duration.className = 'transcript-duration';
   if (msg.duration != null && msg.duration > 0) {
@@ -312,6 +322,7 @@ function addTranscriptItem(msg) {
   meta.appendChild(time);
   meta.appendChild(duration);
   meta.appendChild(lang);
+  meta.appendChild(device);
 
   item.appendChild(meta);
   item.appendChild(text);
@@ -542,10 +553,10 @@ function updateConfigUI(config) {
     dom.settingDevice.value = config.audio_device;
   }
 
-  if (config.theme) {
+  if (config.theme && config.theme !== 'system') {
     applyTheme(config.theme);
   } else {
-    // Fallback: use system theme if no saved preference
+    // Fallback: use system theme if no saved preference (or explicitly set to system)
     (async () => {
       try {
         const systemTheme = await window.api.getSystemTheme();

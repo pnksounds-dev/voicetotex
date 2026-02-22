@@ -495,6 +495,7 @@ class VoiceToTexServer:
                     language_out,
                     duration,
                     model_name,
+                    device=actual_device,
                     segments=segments_data,
                     tags=[device_tag],
                 ),
@@ -514,6 +515,7 @@ class VoiceToTexServer:
                 "text": text,
                 "language": language_out,
                 "duration": duration,
+                "device": actual_device,
                 "timestamp": datetime.now().isoformat(),
                 "segments": segments_data,
             }
@@ -579,6 +581,16 @@ class VoiceToTexServer:
         await self._send_json(websocket, {"type": "config", "data": config_payload})
 
         await self._send_json(websocket, self.model_progress)
+
+        # Send initial device info (cpu/cuda) when available
+        try:
+            actual_device = getattr(self.transcriber, "_device", "")
+            if actual_device:
+                await self._send_json(
+                    websocket, {"type": "device_update", "device": actual_device}
+                )
+        except Exception:
+            pass
 
         # Send initial rewards/dashboard data
         loop = asyncio.get_running_loop()

@@ -23,7 +23,7 @@ DEFAULTS = {
     "noise_reduction": True,
     "websocket_port": 8765,
     "initial_prompt": "",
-    "theme": "dark",
+    "theme": "system",
     "max_history": 100,
     "max_recording_seconds": 300,
 }
@@ -59,7 +59,7 @@ VALID_DEVICES = {"auto", "cuda", "cpu", "mps"}
 VALID_COMPUTE_TYPES = {"float16", "float32", "int8"}
 VALID_OUTPUT_MODES = {"type", "paste", "copy"}
 VALID_HOTKEY_MODES = {"hold", "toggle"}
-VALID_THEMES = {"dark", "light"}
+VALID_THEMES = {"system", "dark", "light"}
 
 _config_lock = threading.Lock()
 _xdg_config = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")

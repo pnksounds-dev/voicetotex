@@ -82,14 +82,25 @@ if (!gotLock) {
 
 function detectSystemTheme() {
   try {
-    // Try GNOME/gsettings (Cinnamon, GNOME, MATE, etc.)
-    const result = spawnSync('gsettings', ['get', 'org.gnome.desktop.interface', 'gtk-theme'], {
+    // GNOME/Cinnamon: prefer explicit color-scheme when available.
+    // Values seen in the wild: 'prefer-dark', 'prefer-light', 'default'
+    const schemeResult = spawnSync('gsettings', ['get', 'org.gnome.desktop.interface', 'color-scheme'], {
       encoding: 'utf8', timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'],
     });
-    if (result.status === 0) {
-      const theme = result.stdout.toLowerCase();
-      // Heuristic: if theme name contains 'light', assume light; otherwise dark
-      return theme.includes('light') ? 'light' : 'dark';
+    if (schemeResult.status === 0) {
+      const scheme = (schemeResult.stdout || '').toLowerCase();
+      if (scheme.includes('prefer-dark')) return 'dark';
+      if (scheme.includes('prefer-light')) return 'light';
+    }
+
+    // Fallback: derive from gtk theme name
+    const themeResult = spawnSync('gsettings', ['get', 'org.gnome.desktop.interface', 'gtk-theme'], {
+      encoding: 'utf8', timeout: 2000, stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    if (themeResult.status === 0) {
+      const theme = (themeResult.stdout || '').toLowerCase();
+      if (theme.includes('dark')) return 'dark';
+      return 'light';
     }
   } catch {}
 
