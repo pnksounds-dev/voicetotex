@@ -105,7 +105,6 @@ function getThemePalette() {
     read('--heat-3', '#4a4a4a'),
     read('--heat-4', '#ff6b6b'),
   ];
-  console.log('[heatmap] theme palette', palette);
   return palette;
 }
 function getHeatColor(count) {
@@ -279,6 +278,11 @@ function renderHeatmapSection(dailyMap) {
     currentWeeks = weeks;
     currentCellSize = cell;
     applyRangeToUI({ alignedStart, endDate, navStartMonth, navEndMonth });
+    console.log('[heatmap] visible range', formatDateShort(alignedStart), 'to', formatDateShort(endDate));
+
+    // Cache palette for this render
+    const palette = getThemePalette();
+    console.log('[heatmap] theme palette', palette);
 
     let previousMonth = '';
     for (let index = 0; index < totalDays; index++) {
@@ -304,7 +308,13 @@ function renderHeatmapSection(dailyMap) {
       const cell = document.createElementNS(SVG_NS, 'rect');
       cell.setAttribute('rx', '3');
       cell.setAttribute('ry', '3');
-      cell.setAttribute('fill', getHeatColor(count));
+      cell.setAttribute('fill', (() => {
+        if (count <= 0) return palette[0];
+        if (count <= 2) return palette[1];
+        if (count <= 5) return palette[2];
+        if (count <= 9) return palette[3];
+        return palette[4];
+      })());
       cell.setAttribute('data-date', dateKey);
       cell.setAttribute('data-count', String(count));
       const tooltip = document.createElementNS(SVG_NS, 'title');
