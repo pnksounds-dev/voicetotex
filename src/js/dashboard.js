@@ -244,6 +244,7 @@ function renderHeatmapSection(dailyMap) {
   };
 
   const rebuildHeatmap = () => {
+    console.log('[heatmap] rebuildHeatmap start, offsetMonths', heatmapOffsetMonths);
     // Clear prior cells/labels
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     while (monthLabels.firstChild) monthLabels.removeChild(monthLabels.firstChild);
@@ -323,12 +324,14 @@ function renderHeatmapSection(dailyMap) {
 
   const goPrev = () => {
     heatmapOffsetMonths += 1;
+    console.log('[heatmap] goPrev, offset now', heatmapOffsetMonths);
     rebuildHeatmap();
   };
 
   const goNext = () => {
     if (heatmapOffsetMonths === 0) return;
     heatmapOffsetMonths -= 1;
+    console.log('[heatmap] goNext, offset now', heatmapOffsetMonths);
     rebuildHeatmap();
   };
 
