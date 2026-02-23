@@ -195,13 +195,17 @@ function renderHeatmapSection(dailyMap) {
   let currentWeeks = HEATMAP_WEEKS_MIN;
   let currentCellSize = HEATMAP_CELL_IDEAL;
 
+  // Layout uses fixed cell size and gaps; we calculate how many weeks fit
   const computeLayout = () => {
     const width = content.clientWidth || 600;
     const ideal = HEATMAP_CELL_IDEAL;
-
     const minUnit = ideal + HEATMAP_GAP;
+    
+    // Calculate how many weeks can fit in the available width
+    // We increase HEATMAP_WEEKS_MAX to allow filling very wide screens
+    const maxWeeks = 52; // Allow up to a full year on wide screens
     const weeksFit = Math.min(
-      HEATMAP_WEEKS_MAX,
+      maxWeeks,
       Math.max(HEATMAP_WEEKS_MIN, Math.floor((width + HEATMAP_GAP) / minUnit)),
     );
 
@@ -345,33 +349,25 @@ function renderHeatmapSection(dailyMap) {
     }
   };
 
-  // Responsive layout: recompute cell sizes based on container width
+  // Responsive layout: recompute SVG and element positions based on fixed cells/gaps
   const layoutHeatmap = () => {
-    const width = content.clientWidth || 600;
     const weeks = currentWeeks || HEATMAP_WEEKS_MIN;
-    
-    // Fixed cell size, stretch gaps to fill container width
     const cell = HEATMAP_CELL_IDEAL;
-    const totalCellWidth = weeks * cell;
-    const remainingWidth = Math.max(0, width - totalCellWidth);
-    const gap = weeks > 1 ? remainingWidth / (weeks - 1) : HEATMAP_GAP;
+    const gap = HEATMAP_GAP;
     
-    // Instead of stretching the entire SVG with viewBox scaling, we compute the exact pixel width needed.
-    // The width is weeks * cell + (weeks - 1) * gap. 
-    // Wait, the gap stretches to fill the container width exactly.
-    // So the total width is simply `width` if weeks > 1 and it exceeds min size.
-    const svgWidth = weeks > 1 ? width : weeks * cell;
-    const svgHeight = 7 * cell + 6 * HEATMAP_GAP; // Height is always fixed (7 cells + 6 gaps)
+    // Fixed sizes: no stretching gaps or cells
+    const svgWidth = weeks * (cell + gap) - gap;
+    const svgHeight = 7 * (cell + gap) - gap;
 
     svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
     svg.setAttribute('width', String(svgWidth));
     svg.setAttribute('height', String(svgHeight));
-    svg.style.width = '100%';
+    svg.style.width = `${svgWidth}px`;
     svg.style.height = `${svgHeight}px`;
 
     for (const { node, week, day } of cells) {
       const x = week * (cell + gap);
-      const y = day * (cell + HEATMAP_GAP);
+      const y = day * (cell + gap);
       node.setAttribute('x', String(x));
       node.setAttribute('y', String(y));
       node.setAttribute('width', String(cell));
@@ -387,9 +383,9 @@ function renderHeatmapSection(dailyMap) {
     // Align weekday labels (M, W, F) to rows 0, 2, 4
     const dayLabels = leftLabels.children;
     if (dayLabels.length >= 3) {
-      dayLabels[0].style.top = `${0 * (cell + HEATMAP_GAP) + cell / 2}px`; // Mon
-      dayLabels[1].style.top = `${2 * (cell + HEATMAP_GAP) + cell / 2}px`; // Wed
-      dayLabels[2].style.top = `${4 * (cell + HEATMAP_GAP) + cell / 2}px`; // Fri
+      dayLabels[0].style.top = `${0 * (cell + gap) + cell / 2}px`; // Mon
+      dayLabels[1].style.top = `${2 * (cell + gap) + cell / 2}px`; // Wed
+      dayLabels[2].style.top = `${4 * (cell + gap) + cell / 2}px`; // Fri
     }
   };
 
@@ -420,7 +416,15 @@ function renderHeatmapSection(dailyMap) {
   };
 
   nav.addEventListener('keydown', handleNavKey);
-  const resizeObserver = new ResizeObserver(layoutHeatmap);
+  
+  // Throttle resize observer to avoid excessive rebuilds
+  let resizeTimeout;
+  const resizeObserver = new ResizeObserver(() => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      rebuildHeatmap();
+    }, 150);
+  });
   resizeObserver.observe(content);
 
   const themeObserver = new MutationObserver(() => {

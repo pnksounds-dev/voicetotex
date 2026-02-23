@@ -2343,9 +2343,7 @@ body[data-state="loading"] .loading-overlay {
 .activity-heatmap {
   display: block;
   height: 108px;
-  width: 100%;
   max-width: none;
-  object-fit: fill;
 }
 
 /* --- Daily Bar Chart --- */
