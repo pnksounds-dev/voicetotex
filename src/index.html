@@ -11,7 +11,10 @@
 
   <!-- Titlebar -->
   <div class="titlebar">
-    <span class="titlebar-title">VoiceToTex</span>
+    <div class="titlebar-brand">
+      <img class="titlebar-logo" id="titlebar-logo" alt="" />
+      <span class="titlebar-title" id="titlebar-title-text">VoiceToTex</span>
+    </div>
     <div class="titlebar-controls">
       <button type="button" class="titlebar-btn" id="btn-shortcuts" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">?</button>
       <button type="button" class="titlebar-btn minimize" id="btn-minimize" aria-label="Minimize">&#x2500;</button>
@@ -160,6 +163,19 @@
             <p class="settings-group-desc">Customize the look and feel</p>
           </div>
           <div class="settings-group-body">
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <label class="settings-label" for="setting-branding">Branding</label>
+                <span class="settings-description">Choose titlebar branding</span>
+              </div>
+              <select class="settings-select" id="setting-branding">
+                <option value="text" selected>Text</option>
+                <option value="v1">Logo V-1</option>
+                <option value="v2">Logo V-2</option>
+                <option value="v3">Logo V-3</option>
+              </select>
+            </div>
+
             <div class="settings-row">
               <div class="settings-row-info">
                 <label class="settings-label">Theme</label>

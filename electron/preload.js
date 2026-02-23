@@ -30,6 +30,9 @@ contextBridge.exposeInMainWorld('api', {
   getConfig: () => ipcRenderer.invoke('get-config'),
   setConfig: (key, value) => ipcRenderer.invoke('set-config', key, value),
 
+  // --- Branding (window/taskbar icon) ---
+  setWindowIcon: (branding) => ipcRenderer.invoke('set-window-icon', branding),
+
   // --- Hotkey (Electron globalShortcut fallback) ---
   setHotkey: (combo, mode) => ipcRenderer.invoke('set-hotkey', combo, mode),
 

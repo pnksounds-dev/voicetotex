@@ -222,11 +222,33 @@ body {
   padding: 0 4px 0 12px;
 }
 
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.titlebar-logo {
+  display: none;
+  height: 18px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+}
+
+.titlebar-logo.visible {
+  display: block;
+}
+
 .titlebar-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
   letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .titlebar-controls {

@@ -44,6 +44,47 @@ let registeredHotkey = null;
 let hotkeyToggleOn = false;
 let warnedHoldFallback = false;
 
+function resolveBrandingIconPath(branding) {
+  const key = (branding || '').toString().toLowerCase();
+  const fileMap = { v1: 'V-1.jpg', v2: 'V-2.jpg', v3: 'V-3.jpg' };
+  const fileName = fileMap[key];
+  if (!fileName) return null;
+
+  const candidates = [];
+  // In dev, app.getAppPath() points at repo root.
+  candidates.push(path.join(app.getAppPath(), 'src', 'assets', 'branding', fileName));
+  // In packaged, src/ is inside app.asar.
+  candidates.push(path.join(app.getAppPath(), 'src', 'assets', 'branding', fileName));
+  // Some packagers expose resourcesPath.
+  candidates.push(path.join(process.resourcesPath, 'src', 'assets', 'branding', fileName));
+  candidates.push(path.join(process.resourcesPath, 'app.asar.unpacked', 'src', 'assets', 'branding', fileName));
+
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) return p;
+    } catch {}
+  }
+  return null;
+}
+
+function applyWindowBrandingIcon(branding) {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  const key = (branding || '').toString().toLowerCase();
+  if (key === 'text' || key === '') return true;
+
+  const iconPath = resolveBrandingIconPath(key);
+  if (!iconPath) return false;
+
+  try {
+    const img = nativeImage.createFromPath(iconPath);
+    if (!img || img.isEmpty()) return false;
+    mainWindow.setIcon(img);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function backendHotkeyToAccelerator(combo) {
   if (!combo || typeof combo !== 'string') return null;
   const tokens = combo.split('+').map(t => t.trim().toLowerCase()).filter(Boolean);
@@ -524,6 +565,10 @@ function killPythonBackend() {
 ipcMain.on('notify-state', (_event, state) => {
   updateTrayState(state);
   updateOverlayState(state);
+});
+
+ipcMain.handle('set-window-icon', (_event, branding) => {
+  return applyWindowBrandingIcon(branding);
 });
 
 ipcMain.handle('get-config', () => ({}));

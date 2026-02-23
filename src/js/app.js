@@ -508,6 +508,11 @@ function updateLoadingProgress(stage, percent) {
 function updateConfigUI(config) {
   if (!config) return;
 
+  if (dom.settingBranding && config.branding != null) {
+    dom.settingBranding.value = String(config.branding);
+    applyBranding(String(config.branding));
+  }
+
   if (config.model && dom.settingModel) {
     dom.settingModel.value = config.model;
   }
@@ -604,6 +609,30 @@ function updateConfigUI(config) {
   }
   if (config.model && dom.modelBadge) {
     dom.modelBadge.textContent = config.model;
+  }
+}
+
+function applyBranding(branding) {
+  const key = (branding || '').toString().toLowerCase();
+  const logo = dom.titlebarLogo;
+  const text = dom.titlebarTitleText;
+  if (!logo || !text) return;
+
+  const fileMap = { v1: 'V-1.jpg', v2: 'V-2.jpg', v3: 'V-3.jpg' };
+  const fileName = fileMap[key];
+
+  if (!fileName) {
+    logo.classList.remove('visible');
+    logo.removeAttribute('src');
+    text.style.display = '';
+  } else {
+    logo.src = `assets/branding/${fileName}`;
+    logo.classList.add('visible');
+    text.style.display = 'none';
+  }
+
+  if (window.api && window.api.setWindowIcon) {
+    window.api.setWindowIcon(key).catch(() => {});
   }
 }
 
@@ -713,6 +742,13 @@ function updateTranscriptPreview(msg) {
 
 function setupSettingsListeners() {
   // Dropdowns
+  if (dom.settingBranding) {
+    dom.settingBranding.addEventListener('change', () => {
+      const val = dom.settingBranding.value;
+      applyBranding(val);
+      if (ws) ws.send('set_config', { key: 'branding', value: val });
+    });
+  }
   if (dom.settingModel) {
     dom.settingModel.addEventListener('change', () => {
       if (ws) ws.send('switch_model', { model: dom.settingModel.value });
@@ -1320,6 +1356,9 @@ document.addEventListener('DOMContentLoaded', () => {
     rewardsContainer:     document.getElementById('rewards-container'),
     analysisContainer:    document.getElementById('analysis-container'),
     themeSwitcher:        document.getElementById('theme-switcher'),
+    settingBranding:      document.getElementById('setting-branding'),
+    titlebarLogo:         document.getElementById('titlebar-logo'),
+    titlebarTitleText:    document.getElementById('titlebar-title-text'),
   };
 
   // Initialize waveform

@@ -13,6 +13,7 @@ DEFAULTS = {
     "model": "large-v3-turbo",
     "language": "auto",
     "translate_target": "",
+    "branding": "text",
     "device": "cuda",
     "compute_type": "float16",
     "beam_size": 5,
@@ -62,6 +63,7 @@ VALID_COMPUTE_TYPES = {"float16", "float32", "int8"}
 VALID_OUTPUT_MODES = {"type", "paste", "copy"}
 VALID_HOTKEY_MODES = {"hold", "toggle"}
 VALID_THEMES = {"system", "dark", "light"}
+VALID_BRANDING = {"text", "v1", "v2", "v3"}
 
 _config_lock = threading.Lock()
 _xdg_config = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
@@ -82,6 +84,8 @@ def _validate_value(key: str, value: object) -> bool:
         return value in VALID_LANGUAGES
     elif key == "translate_target":
         return value == "" or value in VALID_LANGUAGES
+    elif key == "branding":
+        return value in VALID_BRANDING
     elif key == "device":
         return value in VALID_DEVICES
     elif key == "compute_type":
