@@ -95,9 +95,9 @@ function createStatCard(label, value, iconSvg) {
 function getThemePalette() {
   const theme = (document.body.getAttribute('data-theme') || 'dark').toLowerCase();
   if (theme === 'light') {
-    return ['#f2f2f7', '#e0e6f2', '#c8d3ec', '#a3b8e0', '#ff6b6b'];
+    return ['#f7f8fb', '#e5e8f2', '#d3d8eb', '#bcc8e3', '#ff6b6b'];
   }
-  return ['#1f1f27', '#2a2f3a', '#343b48', '#3e4655', '#ff6b6b'];
+  return ['#11131a', '#1c202b', '#262d3a', '#30394a', '#ff6b6b'];
 }
 function getHeatColor(count) {
   const palette = getThemePalette();
@@ -171,6 +171,7 @@ function renderHeatmapSection(dailyMap) {
   // State and render helpers
   let cells = [];
   let monthSpans = [];
+  let currentWeeks = HEATMAP_WEEKS_MIN;
 
   const buildRange = () => {
     const endDate = new Date();
@@ -206,6 +207,7 @@ function renderHeatmapSection(dailyMap) {
     monthSpans = [];
 
     const { alignedStart, endDate, weeks, totalDays, startDate } = buildRange();
+    currentWeeks = weeks;
     applyRangeToUI({ startDate, endDate });
 
     let previousMonth = '';
@@ -241,12 +243,13 @@ function renderHeatmapSection(dailyMap) {
     }
 
     layoutHeatmap();
+    requestAnimationFrame(layoutHeatmap);
   };
 
   // Responsive layout: recompute cell sizes based on container width
   const layoutHeatmap = () => {
     const width = content.clientWidth || 600;
-    const weeks = cells.length > 0 ? Math.max(...cells.map(c => c.weeks || 0)) || HEATMAP_WEEKS_MIN : HEATMAP_WEEKS_MIN;
+    const weeks = currentWeeks || HEATMAP_WEEKS_MIN;
     const cell = Math.min(
       HEATMAP_CELL_MAX,
       Math.max(HEATMAP_CELL_MIN, (width - (weeks - 1) * HEATMAP_GAP) / weeks),
@@ -257,7 +260,7 @@ function renderHeatmapSection(dailyMap) {
     svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
     svg.setAttribute('width', String(svgWidth));
     svg.setAttribute('height', String(svgHeight));
-    svg.style.width = `${svgWidth}px`;
+    svg.style.width = '100%';
     svg.style.maxWidth = '100%';
     svg.style.height = `${svgHeight}px`;
 
