@@ -199,41 +199,45 @@ function renderHeatmapSection(dailyMap) {
   };
 
   const buildRange = () => {
-    const endDate = new Date();
-    endDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // "Anchor" month shown in nav label (start one month prior + user offset)
-    const anchorMonth = new Date(endDate);
-    anchorMonth.setDate(1);
-    anchorMonth.setMonth(anchorMonth.getMonth() - HEATMAP_START_OFFSET_MONTHS - heatmapOffsetMonths);
+    // Determine the visible window end based on offset
+    const visibleEnd = new Date(today);
+    visibleEnd.setMonth(visibleEnd.getMonth() - heatmapOffsetMonths);
+    visibleEnd.setDate(1); // start of month for alignment
+    visibleEnd.setDate(0); // last day of previous month
 
+    // Compute weeksFit and cell size
     const { weeksFit, cell } = computeLayout();
 
     // Build a range that fills the available width:
-    // alignedEnd = endDate, alignedStart = (weeksFit*7-1) days earlier, aligned to Monday.
+    // alignedEnd = visibleEnd, alignedStart = (weeksFit*7-1) days earlier, aligned to Monday.
     const totalDays = weeksFit * 7;
-    const startCandidate = new Date(endDate.getTime() - (totalDays - 1) * MS_PER_DAY);
+    const startCandidate = new Date(visibleEnd.getTime() - (totalDays - 1) * MS_PER_DAY);
     const startDay = (startCandidate.getDay() + 6) % 7;
     const alignedStart = new Date(startCandidate.getTime() - startDay * MS_PER_DAY);
 
-    // The subtitle shows the visible range, not the anchor month.
-    const visibleStart = new Date(alignedStart);
-    const visibleEnd = new Date(endDate);
+    // For nav label, show the month containing alignedStart
+    const navStartMonth = new Date(alignedStart);
+    navStartMonth.setDate(1);
+    const navEndMonth = new Date(visibleEnd);
+    navEndMonth.setDate(1);
+
     return {
       alignedStart,
-      endDate,
+      endDate: visibleEnd,
       weeks: weeksFit,
       totalDays,
-      anchorMonth,
-      visibleStart,
-      visibleEnd,
+      navStartMonth,
+      navEndMonth,
       cell,
     };
   };
 
-  const applyRangeToUI = ({ visibleStart, visibleEnd, anchorMonth, endDate }) => {
-    subtitle.textContent = `${formatDateShort(visibleStart)} - ${formatDateShort(visibleEnd)}`;
-    navLabel.textContent = `${anchorMonth.toLocaleDateString([], { month: 'short', year: 'numeric' })} – ${endDate.toLocaleDateString([], { month: 'short', year: 'numeric' })}`;
+  const applyRangeToUI = ({ alignedStart, endDate, navStartMonth, navEndMonth }) => {
+    subtitle.textContent = `${formatDateShort(alignedStart)} - ${formatDateShort(endDate)}`;
+    navLabel.textContent = `${navStartMonth.toLocaleDateString([], { month: 'short', year: 'numeric' })} – ${navEndMonth.toLocaleDateString([], { month: 'short', year: 'numeric' })}`;
     nextBtn.disabled = heatmapOffsetMonths === 0;
   };
 
@@ -251,10 +255,10 @@ function renderHeatmapSection(dailyMap) {
     cells = [];
     monthSpans = [];
 
-    const { alignedStart, endDate, weeks, totalDays, anchorMonth, visibleStart, visibleEnd, cell } = buildRange();
+    const { alignedStart, endDate, weeks, totalDays, navStartMonth, navEndMonth, cell } = buildRange();
     currentWeeks = weeks;
     currentCellSize = cell;
-    applyRangeToUI({ visibleStart, visibleEnd, anchorMonth, endDate });
+    applyRangeToUI({ alignedStart, endDate, navStartMonth, navEndMonth });
 
     let previousMonth = '';
     for (let index = 0; index < totalDays; index++) {
@@ -264,7 +268,8 @@ function renderHeatmapSection(dailyMap) {
       const dateKey = toDayKey(currentDate);
       const count = dailyMap.get(dateKey)?.count || 0;
 
-      if (day === 0) {
+      // Month label on the first day of each month (not just Monday)
+      if (currentDate.getDate() === 1) {
         const month = currentDate.toLocaleDateString([], { month: 'short' });
         if (month !== previousMonth) {
           const monthLabel = document.createElement('span');
@@ -280,16 +285,41 @@ function renderHeatmapSection(dailyMap) {
       cell.setAttribute('rx', '3');
       cell.setAttribute('ry', '3');
       cell.setAttribute('fill', getHeatColor(count));
-      cell.setAttribute('title', `${count} transcriptions on ${dateKey}`);
+      cell.setAttribute('data-date', dateKey);
+      cell.setAttribute('data-count', String(count));
       const tooltip = document.createElementNS(SVG_NS, 'title');
       tooltip.textContent = `${count} transcriptions on ${dateKey}`;
       cell.appendChild(tooltip);
       svg.appendChild(cell);
-      cells.push({ node: cell, week, day, weeks, count });
+      cells.push({ node: cell, week, day, weeks, count, dateKey });
     }
 
     layoutHeatmap();
     requestAnimationFrame(layoutHeatmap);
+
+    // Custom tooltip hover card
+    let tooltip = null;
+    const showTooltip = (e, dateKey, count) => {
+      hideTooltip();
+      tooltip = document.createElement('div');
+      tooltip.className = 'heatmap-tooltip';
+      tooltip.innerHTML = `<strong>${count}</strong> transcription${count !== 1 ? 's' : ''} on ${dateKey}`;
+      document.body.appendChild(tooltip);
+      const rect = e.target.getBoundingClientRect();
+      tooltip.style.left = `${rect.left + rect.width / 2}px`;
+      tooltip.style.top = `${rect.bottom + 6}px`;
+      tooltip.style.transform = 'translateX(-50%)';
+    };
+    const hideTooltip = () => {
+      if (tooltip) {
+        tooltip.remove();
+        tooltip = null;
+      }
+    };
+    for (const { node, dateKey, count } of cells) {
+      node.addEventListener('mouseenter', (e) => showTooltip(e, dateKey, count));
+      node.addEventListener('mouseleave', hideTooltip);
+    }
   };
 
   // Responsive layout: recompute cell sizes based on container width
