@@ -98,13 +98,15 @@ function getThemePalette() {
   const root = document.documentElement;
   const styles = getComputedStyle(root);
   const read = (name, fallback) => (styles.getPropertyValue(name) || fallback).trim();
-  return [
+  const palette = [
     read('--heat-0', '#1a1a1a'),
     read('--heat-1', '#2a2a2a'),
     read('--heat-2', '#3a3a3a'),
     read('--heat-3', '#4a4a4a'),
     read('--heat-4', '#ff6b6b'),
   ];
+  console.log('[heatmap] theme palette', palette);
+  return palette;
 }
 function getHeatColor(count) {
   const palette = getThemePalette();
@@ -202,7 +204,7 @@ function renderHeatmapSection(dailyMap) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Determine the visible window end based on offset
+    // Determine the visible window end based on offset, but always include today
     const visibleEnd = new Date(today);
     visibleEnd.setMonth(visibleEnd.getMonth() - heatmapOffsetMonths);
     visibleEnd.setDate(1); // start of month for alignment
@@ -224,11 +226,24 @@ function renderHeatmapSection(dailyMap) {
     const navEndMonth = new Date(visibleEnd);
     navEndMonth.setDate(1);
 
+    // Ensure today is always in the visible range by extending if needed
+    let adjustedEnd = new Date(visibleEnd);
+    let adjustedStart = new Date(alignedStart);
+    if (today > adjustedEnd) {
+      // Extend forward to include today
+      const daysToAdd = Math.ceil((today.getTime() - adjustedEnd.getTime()) / MS_PER_DAY);
+      const weeksToAdd = Math.ceil(daysToAdd / 7);
+      adjustedEnd = new Date(adjustedEnd.getTime() + weeksToAdd * 7 * MS_PER_DAY);
+      adjustedStart = new Date(adjustedEnd.getTime() - (weeksFit * 7 - 1) * MS_PER_DAY);
+      const startDayAdj = (adjustedStart.getDay() + 6) % 7;
+      adjustedStart = new Date(adjustedStart.getTime() - startDayAdj * MS_PER_DAY);
+    }
+
     return {
-      alignedStart,
-      endDate: visibleEnd,
+      alignedStart: adjustedStart,
+      endDate: adjustedEnd,
       weeks: weeksFit,
-      totalDays,
+      totalDays: weeksFit * 7,
       navStartMonth,
       navEndMonth,
       cell,
@@ -249,6 +264,11 @@ function renderHeatmapSection(dailyMap) {
 
   const rebuildHeatmap = () => {
     console.log('[heatmap] rebuildHeatmap start, offsetMonths', heatmapOffsetMonths);
+    console.log('[heatmap] dailyMap size', dailyMap.size);
+    if (dailyMap.size > 0) {
+      const sample = Array.from(dailyMap.entries()).slice(0, 3);
+      console.log('[heatmap] dailyMap sample', sample);
+    }
     // Clear prior cells/labels
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     while (monthLabels.firstChild) monthLabels.removeChild(monthLabels.firstChild);
