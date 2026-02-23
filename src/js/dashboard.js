@@ -118,9 +118,6 @@ function renderHeatmapSection(dailyMap) {
   const title = document.createElement('h3');
   title.className = 'dashboard-section-title';
   title.textContent = 'Activity';
-  const endDate = new Date();
-  endDate.setHours(0, 0, 0, 0);
-  const startDate = new Date(endDate.getTime() - (HEATMAP_DAYS - 1) * MS_PER_DAY);
   const subtitle = document.createElement('p');
   subtitle.className = 'dashboard-section-subtitle';
   heading.appendChild(title);
@@ -128,6 +125,7 @@ function renderHeatmapSection(dailyMap) {
 
   const nav = document.createElement('div');
   nav.className = 'heatmap-nav';
+  nav.tabIndex = 0; // make focusable for arrow-key handling
   const prevBtn = document.createElement('button');
   prevBtn.type = 'button';
   prevBtn.className = 'heatmap-nav-btn';
@@ -293,15 +291,17 @@ function renderHeatmapSection(dailyMap) {
   prevBtn.addEventListener('click', goPrev);
   nextBtn.addEventListener('click', goNext);
 
-  const handleKey = (e) => {
+  const handleNavKey = (e) => {
     if (e.key === 'ArrowLeft') {
+      e.preventDefault();
       goPrev();
     } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
       goNext();
     }
   };
 
-  document.addEventListener('keydown', handleKey);
+  nav.addEventListener('keydown', handleNavKey);
   const resizeObserver = new ResizeObserver(layoutHeatmap);
   resizeObserver.observe(content);
 
