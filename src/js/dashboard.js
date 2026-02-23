@@ -1,9 +1,11 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const HEATMAP_WEEKS = 15;
-const HEATMAP_DAYS = HEATMAP_WEEKS * 7;
-const HEATMAP_CELL = 12;
 const HEATMAP_GAP = 3;
+const HEATMAP_CELL_MIN = 9;
+const HEATMAP_CELL_MAX = 14;
+const HEATMAP_WEEKS_MIN = 12;
+const HEATMAP_WEEKS_MAX = 20;
+const HEATMAP_START_OFFSET_MONTHS = 1; // start one month prior by default
 function toDayKey(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -90,12 +92,23 @@ function createStatCard(label, value, iconSvg) {
   card.appendChild(labelEl);
   return card;
 }
-function getHeatColor(count) {
-  if (count <= 0) return '#1a1a1a';
-  if (count <= 2) return '#3d1a1a';
-  if (count <= 5) return '#8b2020';
-  return '#ff4444';
+function getThemePalette() {
+  const theme = (document.body.getAttribute('data-theme') || 'dark').toLowerCase();
+  if (theme === 'light') {
+    return ['#f2f2f7', '#e0e6f2', '#c8d3ec', '#a3b8e0', '#ff6b6b'];
+  }
+  return ['#1f1f27', '#2a2f3a', '#343b48', '#3e4655', '#ff6b6b'];
 }
+function getHeatColor(count) {
+  const palette = getThemePalette();
+  if (count <= 0) return palette[0];
+  if (count <= 2) return palette[1];
+  if (count <= 5) return palette[2];
+  if (count <= 9) return palette[3];
+  return palette[4];
+}
+let heatmapOffsetMonths = 0;
+
 function renderHeatmapSection(dailyMap) {
   const section = document.createElement('section');
   section.className = 'dashboard-section dashboard-activity';
@@ -110,9 +123,26 @@ function renderHeatmapSection(dailyMap) {
   const startDate = new Date(endDate.getTime() - (HEATMAP_DAYS - 1) * MS_PER_DAY);
   const subtitle = document.createElement('p');
   subtitle.className = 'dashboard-section-subtitle';
-  subtitle.textContent = `${formatDateShort(startDate)} - ${formatDateShort(endDate)}`;
   heading.appendChild(title);
   heading.appendChild(subtitle);
+
+  const nav = document.createElement('div');
+  nav.className = 'heatmap-nav';
+  const prevBtn = document.createElement('button');
+  prevBtn.type = 'button';
+  prevBtn.className = 'heatmap-nav-btn';
+  prevBtn.textContent = '←';
+  const nextBtn = document.createElement('button');
+  nextBtn.type = 'button';
+  nextBtn.className = 'heatmap-nav-btn';
+  nextBtn.textContent = '→';
+  const navLabel = document.createElement('span');
+  navLabel.className = 'heatmap-nav-label';
+  nav.appendChild(prevBtn);
+  nav.appendChild(navLabel);
+  nav.appendChild(nextBtn);
+  heading.appendChild(nav);
+
   const chartWrap = document.createElement('div');
   chartWrap.className = 'heatmap-wrap';
 
@@ -121,60 +151,161 @@ function renderHeatmapSection(dailyMap) {
   leftLabels.appendChild(document.createElement('span')).textContent = 'M';
   leftLabels.appendChild(document.createElement('span')).textContent = 'W';
   leftLabels.appendChild(document.createElement('span')).textContent = 'F';
+
   const content = document.createElement('div');
   content.className = 'heatmap-content';
 
   const monthLabels = document.createElement('div');
   monthLabels.className = 'heatmap-month-labels';
-  const svgWidth = HEATMAP_WEEKS * (HEATMAP_CELL + HEATMAP_GAP) - HEATMAP_GAP;
-  const svgHeight = 7 * (HEATMAP_CELL + HEATMAP_GAP) - HEATMAP_GAP;
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.classList.add('activity-heatmap');
-  svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
-  svg.setAttribute('width', String(svgWidth));
-  svg.setAttribute('height', String(svgHeight));
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', 'Daily activity heatmap');
-  let previousMonth = '';
-  for (let index = 0; index < HEATMAP_DAYS; index++) {
-    const currentDate = new Date(startDate.getTime() + index * MS_PER_DAY);
-    const day = (currentDate.getDay() + 6) % 7;
-    const week = Math.floor(index / 7);
-    const x = week * (HEATMAP_CELL + HEATMAP_GAP);
-    const y = day * (HEATMAP_CELL + HEATMAP_GAP);
-    const dateKey = toDayKey(currentDate);
-    const count = dailyMap.get(dateKey)?.count || 0;
-    if ((day === 0 || index === 0) && currentDate.getDate() <= 7) {
-      const month = currentDate.toLocaleDateString([], { month: 'short' });
-      if (month !== previousMonth) {
-        const monthLabel = document.createElement('span');
-        monthLabel.className = 'heatmap-month-label';
-        monthLabel.textContent = month;
-        monthLabel.style.left = `${x}px`;
-        monthLabels.appendChild(monthLabel);
-        previousMonth = month;
-      }
-    }
-    const cell = document.createElementNS(SVG_NS, 'rect');
-    cell.setAttribute('x', String(x));
-    cell.setAttribute('y', String(y));
-    cell.setAttribute('width', String(HEATMAP_CELL));
-    cell.setAttribute('height', String(HEATMAP_CELL));
-    cell.setAttribute('rx', '3');
-    cell.setAttribute('ry', '3');
-    cell.setAttribute('fill', getHeatColor(count));
-    cell.setAttribute('title', `${count} transcriptions on ${dateKey}`);
-    const tooltip = document.createElementNS(SVG_NS, 'title');
-    tooltip.textContent = `${count} transcriptions on ${dateKey}`;
-    cell.appendChild(tooltip);
-    svg.appendChild(cell);
-  }
+
   content.appendChild(monthLabels);
   content.appendChild(svg);
   chartWrap.appendChild(leftLabels);
   chartWrap.appendChild(content);
   section.appendChild(heading);
   section.appendChild(chartWrap);
+
+  // State and render helpers
+  let cells = [];
+  let monthSpans = [];
+
+  const buildRange = () => {
+    const endDate = new Date();
+    endDate.setHours(0, 0, 0, 0);
+    const startDate = new Date(endDate);
+    startDate.setDate(1);
+    startDate.setMonth(startDate.getMonth() - HEATMAP_START_OFFSET_MONTHS - heatmapOffsetMonths);
+
+    // Align start to Monday
+    const startDay = (startDate.getDay() + 6) % 7;
+    const alignedStart = new Date(startDate.getTime() - startDay * MS_PER_DAY);
+
+    const dayCount = Math.ceil((endDate.getTime() - alignedStart.getTime()) / MS_PER_DAY) + 1;
+    const weeks = Math.min(
+      HEATMAP_WEEKS_MAX,
+      Math.max(HEATMAP_WEEKS_MIN, Math.ceil(dayCount / 7) + 1),
+    );
+    const totalDays = weeks * 7;
+    return { alignedStart, endDate, weeks, totalDays, startDate };
+  };
+
+  const applyRangeToUI = ({ startDate, endDate }) => {
+    subtitle.textContent = `${formatDateShort(startDate)} - ${formatDateShort(endDate)}`;
+    navLabel.textContent = `${startDate.toLocaleDateString([], { month: 'short', year: 'numeric' })} – ${endDate.toLocaleDateString([], { month: 'short', year: 'numeric' })}`;
+    nextBtn.disabled = heatmapOffsetMonths === 0;
+  };
+
+  const rebuildHeatmap = () => {
+    // Clear prior cells/labels
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    while (monthLabels.firstChild) monthLabels.removeChild(monthLabels.firstChild);
+    cells = [];
+    monthSpans = [];
+
+    const { alignedStart, endDate, weeks, totalDays, startDate } = buildRange();
+    applyRangeToUI({ startDate, endDate });
+
+    let previousMonth = '';
+    for (let index = 0; index < totalDays; index++) {
+      const currentDate = new Date(alignedStart.getTime() + index * MS_PER_DAY);
+      const day = (currentDate.getDay() + 6) % 7; // Monday=0
+      const week = Math.floor(index / 7);
+      const dateKey = toDayKey(currentDate);
+      const count = dailyMap.get(dateKey)?.count || 0;
+
+      if (day === 0) {
+        const month = currentDate.toLocaleDateString([], { month: 'short' });
+        if (month !== previousMonth) {
+          const monthLabel = document.createElement('span');
+          monthLabel.className = 'heatmap-month-label';
+          monthLabel.textContent = month;
+          monthLabels.appendChild(monthLabel);
+          monthSpans.push({ span: monthLabel, weekIndex: week });
+          previousMonth = month;
+        }
+      }
+
+      const cell = document.createElementNS(SVG_NS, 'rect');
+      cell.setAttribute('rx', '3');
+      cell.setAttribute('ry', '3');
+      cell.setAttribute('fill', getHeatColor(count));
+      cell.setAttribute('title', `${count} transcriptions on ${dateKey}`);
+      const tooltip = document.createElementNS(SVG_NS, 'title');
+      tooltip.textContent = `${count} transcriptions on ${dateKey}`;
+      cell.appendChild(tooltip);
+      svg.appendChild(cell);
+      cells.push({ node: cell, week, day, weeks });
+    }
+
+    layoutHeatmap();
+  };
+
+  // Responsive layout: recompute cell sizes based on container width
+  const layoutHeatmap = () => {
+    const width = content.clientWidth || 600;
+    const weeks = cells.length > 0 ? Math.max(...cells.map(c => c.weeks || 0)) || HEATMAP_WEEKS_MIN : HEATMAP_WEEKS_MIN;
+    const cell = Math.min(
+      HEATMAP_CELL_MAX,
+      Math.max(HEATMAP_CELL_MIN, (width - (weeks - 1) * HEATMAP_GAP) / weeks),
+    );
+    const svgWidth = weeks * (cell + HEATMAP_GAP) - HEATMAP_GAP;
+    const svgHeight = 7 * (cell + HEATMAP_GAP) - HEATMAP_GAP;
+
+    svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+    svg.setAttribute('width', String(svgWidth));
+    svg.setAttribute('height', String(svgHeight));
+    svg.style.width = `${svgWidth}px`;
+    svg.style.maxWidth = '100%';
+    svg.style.height = `${svgHeight}px`;
+
+    for (const { node, week, day } of cells) {
+      const x = week * (cell + HEATMAP_GAP);
+      const y = day * (cell + HEATMAP_GAP);
+      node.setAttribute('x', String(x));
+      node.setAttribute('y', String(y));
+      node.setAttribute('width', String(cell));
+      node.setAttribute('height', String(cell));
+    }
+
+    for (const { span, weekIndex } of monthSpans) {
+      const x = weekIndex * (cell + HEATMAP_GAP) + cell / 2;
+      span.style.left = `${x}px`;
+      span.style.transform = 'translateX(-50%)';
+    }
+  };
+
+  const goPrev = () => {
+    heatmapOffsetMonths += 1;
+    rebuildHeatmap();
+  };
+
+  const goNext = () => {
+    if (heatmapOffsetMonths === 0) return;
+    heatmapOffsetMonths -= 1;
+    rebuildHeatmap();
+  };
+
+  prevBtn.addEventListener('click', goPrev);
+  nextBtn.addEventListener('click', goNext);
+
+  const handleKey = (e) => {
+    if (e.key === 'ArrowLeft') {
+      goPrev();
+    } else if (e.key === 'ArrowRight') {
+      goNext();
+    }
+  };
+
+  document.addEventListener('keydown', handleKey);
+  const resizeObserver = new ResizeObserver(layoutHeatmap);
+  resizeObserver.observe(content);
+
+  rebuildHeatmap();
   return section;
 }
 function renderDailyBarSection(dailyMap) {
