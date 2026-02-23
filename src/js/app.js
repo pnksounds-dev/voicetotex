@@ -1361,6 +1361,10 @@ document.addEventListener('DOMContentLoaded', () => {
     titlebarTitleText:    document.getElementById('titlebar-title-text'),
   };
 
+  if (dom.settingBranding) {
+    applyBranding(dom.settingBranding.value);
+  }
+
   // Initialize waveform
   if (dom.waveformCanvas) {
     waveform = new WaveformVisualizer(dom.waveformCanvas);

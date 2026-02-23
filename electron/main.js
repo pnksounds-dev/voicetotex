@@ -4,7 +4,7 @@ const { app, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage, globalShor
 const path = require('path');
 const fs = require('fs');
 const { spawn, spawnSync, execSync } = require('child_process');
-const { createTray, updateTrayState } = require('./tray');
+const { createTray, updateTrayState, setTrayIcon } = require('./tray');
 const { createOverlay, showOverlay, hideOverlay, updateOverlayState, destroyOverlay } = require('./overlay');
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -44,6 +44,22 @@ let registeredHotkey = null;
 let hotkeyToggleOn = false;
 let warnedHoldFallback = false;
 
+function configFilePath() {
+  const xdgConfigHome = process.env.XDG_CONFIG_HOME || path.join(app.getPath('home'), '.config');
+  return path.join(xdgConfigHome, 'voicetotex', 'config.json');
+}
+
+function readPersistedBranding() {
+  try {
+    const raw = fs.readFileSync(configFilePath(), 'utf8');
+    const parsed = JSON.parse(raw);
+    const val = parsed && typeof parsed.branding === 'string' ? parsed.branding : 'text';
+    return val;
+  } catch {
+    return 'text';
+  }
+}
+
 function resolveBrandingIconPath(branding) {
   const key = (branding || '').toString().toLowerCase();
   const fileMap = { v1: 'V-1.jpg', v2: 'V-2.jpg', v3: 'V-3.jpg' };
@@ -79,6 +95,8 @@ function applyWindowBrandingIcon(branding) {
     const img = nativeImage.createFromPath(iconPath);
     if (!img || img.isEmpty()) return false;
     mainWindow.setIcon(img);
+    // Also apply to tray icon if present.
+    setTrayIcon(img.resize({ width: 18, height: 18, quality: 'best' }));
     return true;
   } catch {
     return false;
@@ -225,6 +243,10 @@ function startup() {
 }
 
 function createMainWindow() {
+  const persistedBranding = readPersistedBranding();
+  const brandingIconPath = resolveBrandingIconPath(persistedBranding);
+  const brandingIcon = brandingIconPath ? nativeImage.createFromPath(brandingIconPath) : null;
+
   const windowOptions = {
     width: 960,
     height: 700,
@@ -233,6 +255,7 @@ function createMainWindow() {
     frame: false,
     resizable: true,
     backgroundColor: '#0f0f0f',
+    ...(brandingIcon && !brandingIcon.isEmpty() ? { icon: brandingIcon } : {}),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -251,6 +274,13 @@ function createMainWindow() {
 
   mainWindow = new BrowserWindow(windowOptions);
   mainWindow.loadFile(path.join(__dirname, '..', 'src', 'index.html'));
+
+  // Ensure tray icon matches on startup too.
+  if (brandingIcon && !brandingIcon.isEmpty()) {
+    try {
+      setTrayIcon(brandingIcon.resize({ width: 18, height: 18, quality: 'best' }));
+    } catch {}
+  }
 
   const persistBounds = () => {
     if (mainWindow && !mainWindow.isDestroyed()) {

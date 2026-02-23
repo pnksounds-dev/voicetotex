@@ -10,6 +10,7 @@ let mainWindowRef = null;
 let currentState = 'idle';
 let currentLanguage = 'auto';
 let appTrayIcon = null;
+let overrideTrayIcon = null;
 
 // --- Tray icon generation (SVG → nativeImage, no external files) ---
 const STATE_ICON_COLORS = {
@@ -149,7 +150,7 @@ function createTray(mainWindow) {
   mainWindowRef = mainWindow;
 
   appTrayIcon = resolveAppTrayIcon();
-  const icon = appTrayIcon || createTrayIcon(STATE_ICON_COLORS.idle);
+  const icon = overrideTrayIcon || appTrayIcon || createTrayIcon(STATE_ICON_COLORS.idle);
   tray = new Tray(icon);
   tray.setToolTip('VoiceToTex');
   tray.setContextMenu(buildContextMenu());
@@ -164,7 +165,9 @@ function updateTrayState(state) {
   currentState = state;
   if (!tray || tray.isDestroyed()) return;
 
-  if (appTrayIcon) {
+  if (overrideTrayIcon) {
+    tray.setImage(overrideTrayIcon);
+  } else if (appTrayIcon) {
     tray.setImage(appTrayIcon);
   } else {
     const color = STATE_ICON_COLORS[state] || STATE_ICON_COLORS.idle;
@@ -173,4 +176,11 @@ function updateTrayState(state) {
   tray.setContextMenu(buildContextMenu());
 }
 
-module.exports = { createTray, updateTrayState, updateTrayLanguage };
+function setTrayIcon(image) {
+  overrideTrayIcon = image || null;
+  if (tray && !tray.isDestroyed()) {
+    updateTrayState(currentState);
+  }
+}
+
+module.exports = { createTray, updateTrayState, updateTrayLanguage, setTrayIcon };
