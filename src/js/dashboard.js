@@ -154,9 +154,22 @@ function renderHeatmapSection(dailyMap) {
 
   const leftLabels = document.createElement('div');
   leftLabels.className = 'heatmap-day-labels';
-  leftLabels.appendChild(document.createElement('span')).textContent = 'M';
-  leftLabels.appendChild(document.createElement('span')).textContent = 'W';
-  leftLabels.appendChild(document.createElement('span')).textContent = 'F';
+  
+  const lblMon = document.createElement('span');
+  lblMon.className = 'heatmap-day-label';
+  lblMon.textContent = 'M';
+  
+  const lblWed = document.createElement('span');
+  lblWed.className = 'heatmap-day-label';
+  lblWed.textContent = 'W';
+  
+  const lblFri = document.createElement('span');
+  lblFri.className = 'heatmap-day-label';
+  lblFri.textContent = 'F';
+  
+  leftLabels.appendChild(lblMon);
+  leftLabels.appendChild(lblWed);
+  leftLabels.appendChild(lblFri);
 
   const content = document.createElement('div');
   content.className = 'heatmap-content';
@@ -203,48 +216,31 @@ function renderHeatmapSection(dailyMap) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Determine the visible window end based on offset, but always include today
-    const visibleEnd = new Date(today);
-    visibleEnd.setMonth(visibleEnd.getMonth() - heatmapOffsetMonths);
-    visibleEnd.setDate(1); // start of month for alignment
-    visibleEnd.setDate(0); // last day of previous month
-
-    // Compute weeksFit and cell size
     const { weeksFit, cell } = computeLayout();
-
-    // Build a range that fills the available width:
-    // alignedEnd = visibleEnd, alignedStart = (weeksFit*7-1) days earlier, aligned to Monday.
     const totalDays = weeksFit * 7;
-    const startCandidate = new Date(visibleEnd.getTime() - (totalDays - 1) * MS_PER_DAY);
-    const startDay = (startCandidate.getDay() + 6) % 7;
-    const alignedStart = new Date(startCandidate.getTime() - startDay * MS_PER_DAY);
 
-    // For nav label, show the month containing alignedStart
-    const navStartMonth = new Date(alignedStart);
-    navStartMonth.setDate(1);
-    const navEndMonth = new Date(visibleEnd);
-    navEndMonth.setDate(1);
+    // The grid ends on a Sunday, containing the current day (if offset is 0)
+    // Shift backward by 4 weeks per offset step
+    const offsetDays = heatmapOffsetMonths * 4 * 7;
+    const gridEndDay = new Date(today.getTime() - offsetDays * MS_PER_DAY);
+    // Align gridEndDay to Sunday (end of a week)
+    const endDayOfWeek = (gridEndDay.getDay() + 6) % 7; // 0=Mon, 6=Sun
+    const daysToSunday = 6 - endDayOfWeek;
+    const alignedEnd = new Date(gridEndDay.getTime() + daysToSunday * MS_PER_DAY);
 
-    // Ensure today is always in the visible range by extending if needed
-    let adjustedEnd = new Date(visibleEnd);
-    let adjustedStart = new Date(alignedStart);
-    if (today > adjustedEnd) {
-      // Extend forward to include today
-      const daysToAdd = Math.ceil((today.getTime() - adjustedEnd.getTime()) / MS_PER_DAY);
-      const weeksToAdd = Math.ceil(daysToAdd / 7);
-      adjustedEnd = new Date(adjustedEnd.getTime() + weeksToAdd * 7 * MS_PER_DAY);
-      adjustedStart = new Date(adjustedEnd.getTime() - (weeksFit * 7 - 1) * MS_PER_DAY);
-      const startDayAdj = (adjustedStart.getDay() + 6) % 7;
-      adjustedStart = new Date(adjustedStart.getTime() - startDayAdj * MS_PER_DAY);
-    }
+    // Grid start is exactly totalDays prior, aligned to Monday
+    const alignedStart = new Date(alignedEnd.getTime() - (totalDays - 1) * MS_PER_DAY);
 
+    // Labels just use the exact start/end of the grid
     return {
-      alignedStart: adjustedStart,
-      endDate: adjustedEnd,
+      alignedStart,
+      endDate: alignedEnd,
       weeks: weeksFit,
-      totalDays: weeksFit * 7,
-      navStartMonth,
-      navEndMonth,
+      totalDays,
+      navStartMonth: alignedStart,
+      navEndMonth: alignedEnd,
+      visibleStart: alignedStart,
+      visibleEnd: alignedEnd,
       cell,
     };
   };
@@ -380,6 +376,14 @@ function renderHeatmapSection(dailyMap) {
       const x = weekIndex * (cell + HEATMAP_GAP) + cell / 2;
       span.style.left = `${x}px`;
       span.style.transform = 'translateX(-50%)';
+    }
+
+    // Align weekday labels (M, W, F) to rows 0, 2, 4
+    const dayLabels = leftLabels.children;
+    if (dayLabels.length >= 3) {
+      dayLabels[0].style.top = `${0 * (cell + HEATMAP_GAP) + cell / 2}px`; // Mon
+      dayLabels[1].style.top = `${2 * (cell + HEATMAP_GAP) + cell / 2}px`; // Wed
+      dayLabels[2].style.top = `${4 * (cell + HEATMAP_GAP) + cell / 2}px`; // Fri
     }
   };
 

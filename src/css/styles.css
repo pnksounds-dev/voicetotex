@@ -2277,13 +2277,19 @@ body[data-state="loading"] .loading-overlay {
 .heatmap-day-labels {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding-top: 18px;
+  position: relative;
   font-size: 0.65rem;
   color: var(--text-disabled);
   min-width: 14px;
   font-weight: 500;
   letter-spacing: 0.3px;
+  margin-top: 18px; /* account for month labels */
+}
+
+.heatmap-day-label {
+  position: absolute;
+  line-height: 1;
+  transform: translateY(-50%);
 }
 
 .heatmap-month-labels {
