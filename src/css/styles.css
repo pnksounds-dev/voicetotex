@@ -13,6 +13,11 @@
   --text-disabled: #666;
   --accent: #ff6b9d;
   --accent-hover: #ff8fab;
+  --heat-0: #2a2f3a;
+  --heat-1: #3a4252;
+  --heat-2: #4b566c;
+  --heat-3: #5e6d8a;
+  --heat-4: #ff6b6b;
   --color-recording: #ff4444;
   --color-processing: #f0a500;
   --color-success: #ff6b9d;
@@ -42,6 +47,11 @@
   --text-disabled: #9e9eb8;
   --accent: #e6396f;
   --accent-hover: #d12d5f;
+  --heat-0: #eef0f6;
+  --heat-1: #d7ddef;
+  --heat-2: #bfc9e8;
+  --heat-3: #98a9dd;
+  --heat-4: #e6396f;
   --color-recording: #e63535;
   --color-processing: #d48a00;
   --color-success: #1ea35a;

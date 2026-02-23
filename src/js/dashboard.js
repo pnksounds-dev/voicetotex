@@ -3,6 +3,8 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const HEATMAP_GAP = 3;
 const HEATMAP_CELL_MIN = 9;
 const HEATMAP_CELL_MAX = 14;
+const HEATMAP_CELL_IDEAL = 11;
+const HEATMAP_MAX_STRETCH = 1.15; // <= 15% extra width vs square cells
 const HEATMAP_WEEKS_MIN = 12;
 const HEATMAP_WEEKS_MAX = 20;
 const HEATMAP_START_OFFSET_MONTHS = 1; // start one month prior by default
@@ -93,11 +95,16 @@ function createStatCard(label, value, iconSvg) {
   return card;
 }
 function getThemePalette() {
-  const theme = (document.body.getAttribute('data-theme') || 'dark').toLowerCase();
-  if (theme === 'light') {
-    return ['#f7f8fb', '#e5e8f2', '#d3d8eb', '#bcc8e3', '#ff6b6b'];
-  }
-  return ['#11131a', '#1c202b', '#262d3a', '#30394a', '#ff6b6b'];
+  const root = document.documentElement;
+  const styles = getComputedStyle(root);
+  const read = (name, fallback) => (styles.getPropertyValue(name) || fallback).trim();
+  return [
+    read('--heat-0', '#1a1a1a'),
+    read('--heat-1', '#2a2a2a'),
+    read('--heat-2', '#3a3a3a'),
+    read('--heat-3', '#4a4a4a'),
+    read('--heat-4', '#ff6b6b'),
+  ];
 }
 function getHeatColor(count) {
   const palette = getThemePalette();
@@ -172,31 +179,68 @@ function renderHeatmapSection(dailyMap) {
   let cells = [];
   let monthSpans = [];
   let currentWeeks = HEATMAP_WEEKS_MIN;
+  let currentCellSize = HEATMAP_CELL_IDEAL;
+
+  const computeLayout = () => {
+    const width = content.clientWidth || 600;
+    const ideal = Math.min(HEATMAP_CELL_MAX, Math.max(HEATMAP_CELL_MIN, HEATMAP_CELL_IDEAL));
+
+    const minUnit = ideal + HEATMAP_GAP;
+    const weeksFit = Math.min(
+      HEATMAP_WEEKS_MAX,
+      Math.max(HEATMAP_WEEKS_MIN, Math.floor((width + HEATMAP_GAP) / minUnit)),
+    );
+
+    // Compute cell size that fits weeksFit, but cap stretching to 15%.
+    const cellFit = (width - (weeksFit - 1) * HEATMAP_GAP) / weeksFit;
+    const cellCapped = Math.min(ideal * HEATMAP_MAX_STRETCH, cellFit);
+    const cell = Math.min(HEATMAP_CELL_MAX, Math.max(HEATMAP_CELL_MIN, cellCapped));
+    return { weeksFit, cell };
+  };
 
   const buildRange = () => {
     const endDate = new Date();
     endDate.setHours(0, 0, 0, 0);
-    const startDate = new Date(endDate);
-    startDate.setDate(1);
-    startDate.setMonth(startDate.getMonth() - HEATMAP_START_OFFSET_MONTHS - heatmapOffsetMonths);
 
-    // Align start to Monday
-    const startDay = (startDate.getDay() + 6) % 7;
-    const alignedStart = new Date(startDate.getTime() - startDay * MS_PER_DAY);
+    // "Anchor" month shown in nav label (start one month prior + user offset)
+    const anchorMonth = new Date(endDate);
+    anchorMonth.setDate(1);
+    anchorMonth.setMonth(anchorMonth.getMonth() - HEATMAP_START_OFFSET_MONTHS - heatmapOffsetMonths);
 
-    const dayCount = Math.ceil((endDate.getTime() - alignedStart.getTime()) / MS_PER_DAY) + 1;
-    const weeks = Math.min(
-      HEATMAP_WEEKS_MAX,
-      Math.max(HEATMAP_WEEKS_MIN, Math.ceil(dayCount / 7) + 1),
-    );
-    const totalDays = weeks * 7;
-    return { alignedStart, endDate, weeks, totalDays, startDate };
+    const { weeksFit, cell } = computeLayout();
+
+    // Build a range that fills the available width:
+    // alignedEnd = endDate, alignedStart = (weeksFit*7-1) days earlier, aligned to Monday.
+    const totalDays = weeksFit * 7;
+    const startCandidate = new Date(endDate.getTime() - (totalDays - 1) * MS_PER_DAY);
+    const startDay = (startCandidate.getDay() + 6) % 7;
+    const alignedStart = new Date(startCandidate.getTime() - startDay * MS_PER_DAY);
+
+    // The subtitle shows the visible range, not the anchor month.
+    const visibleStart = new Date(alignedStart);
+    const visibleEnd = new Date(endDate);
+    return {
+      alignedStart,
+      endDate,
+      weeks: weeksFit,
+      totalDays,
+      anchorMonth,
+      visibleStart,
+      visibleEnd,
+      cell,
+    };
   };
 
-  const applyRangeToUI = ({ startDate, endDate }) => {
-    subtitle.textContent = `${formatDateShort(startDate)} - ${formatDateShort(endDate)}`;
-    navLabel.textContent = `${startDate.toLocaleDateString([], { month: 'short', year: 'numeric' })} – ${endDate.toLocaleDateString([], { month: 'short', year: 'numeric' })}`;
+  const applyRangeToUI = ({ visibleStart, visibleEnd, anchorMonth, endDate }) => {
+    subtitle.textContent = `${formatDateShort(visibleStart)} - ${formatDateShort(visibleEnd)}`;
+    navLabel.textContent = `${anchorMonth.toLocaleDateString([], { month: 'short', year: 'numeric' })} – ${endDate.toLocaleDateString([], { month: 'short', year: 'numeric' })}`;
     nextBtn.disabled = heatmapOffsetMonths === 0;
+  };
+
+  const applyThemeToCells = () => {
+    for (const { node, count } of cells) {
+      node.setAttribute('fill', getHeatColor(count));
+    }
   };
 
   const rebuildHeatmap = () => {
@@ -206,9 +250,10 @@ function renderHeatmapSection(dailyMap) {
     cells = [];
     monthSpans = [];
 
-    const { alignedStart, endDate, weeks, totalDays, startDate } = buildRange();
+    const { alignedStart, endDate, weeks, totalDays, anchorMonth, visibleStart, visibleEnd, cell } = buildRange();
     currentWeeks = weeks;
-    applyRangeToUI({ startDate, endDate });
+    currentCellSize = cell;
+    applyRangeToUI({ visibleStart, visibleEnd, anchorMonth, endDate });
 
     let previousMonth = '';
     for (let index = 0; index < totalDays; index++) {
@@ -239,7 +284,7 @@ function renderHeatmapSection(dailyMap) {
       tooltip.textContent = `${count} transcriptions on ${dateKey}`;
       cell.appendChild(tooltip);
       svg.appendChild(cell);
-      cells.push({ node: cell, week, day, weeks });
+      cells.push({ node: cell, week, day, weeks, count });
     }
 
     layoutHeatmap();
@@ -248,19 +293,15 @@ function renderHeatmapSection(dailyMap) {
 
   // Responsive layout: recompute cell sizes based on container width
   const layoutHeatmap = () => {
-    const width = content.clientWidth || 600;
     const weeks = currentWeeks || HEATMAP_WEEKS_MIN;
-    const cell = Math.min(
-      HEATMAP_CELL_MAX,
-      Math.max(HEATMAP_CELL_MIN, (width - (weeks - 1) * HEATMAP_GAP) / weeks),
-    );
+    const cell = currentCellSize || HEATMAP_CELL_IDEAL;
     const svgWidth = weeks * (cell + HEATMAP_GAP) - HEATMAP_GAP;
     const svgHeight = 7 * (cell + HEATMAP_GAP) - HEATMAP_GAP;
 
     svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
     svg.setAttribute('width', String(svgWidth));
     svg.setAttribute('height', String(svgHeight));
-    svg.style.width = '100%';
+    svg.style.width = `${svgWidth}px`;
     svg.style.maxWidth = '100%';
     svg.style.height = `${svgHeight}px`;
 
@@ -307,6 +348,11 @@ function renderHeatmapSection(dailyMap) {
   nav.addEventListener('keydown', handleNavKey);
   const resizeObserver = new ResizeObserver(layoutHeatmap);
   resizeObserver.observe(content);
+
+  const themeObserver = new MutationObserver(() => {
+    applyThemeToCells();
+  });
+  themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
 
   rebuildHeatmap();
   return section;
