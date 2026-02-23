@@ -197,7 +197,7 @@ function renderHeatmapSection(dailyMap) {
 
   const computeLayout = () => {
     const width = content.clientWidth || 600;
-    const ideal = Math.min(HEATMAP_CELL_MAX, Math.max(HEATMAP_CELL_MIN, HEATMAP_CELL_IDEAL));
+    const ideal = HEATMAP_CELL_IDEAL;
 
     const minUnit = ideal + HEATMAP_GAP;
     const weeksFit = Math.min(
@@ -205,11 +205,7 @@ function renderHeatmapSection(dailyMap) {
       Math.max(HEATMAP_WEEKS_MIN, Math.floor((width + HEATMAP_GAP) / minUnit)),
     );
 
-    // Compute cell size that fits weeksFit, but cap stretching to 15%.
-    const cellFit = (width - (weeksFit - 1) * HEATMAP_GAP) / weeksFit;
-    const cellCapped = Math.min(ideal * HEATMAP_MAX_STRETCH, cellFit);
-    const cell = Math.min(HEATMAP_CELL_MAX, Math.max(HEATMAP_CELL_MIN, cellCapped));
-    return { weeksFit, cell };
+    return { weeksFit, cell: ideal };
   };
 
   const buildRange = () => {
@@ -351,20 +347,26 @@ function renderHeatmapSection(dailyMap) {
 
   // Responsive layout: recompute cell sizes based on container width
   const layoutHeatmap = () => {
+    const width = content.clientWidth || 600;
     const weeks = currentWeeks || HEATMAP_WEEKS_MIN;
-    const cell = currentCellSize || HEATMAP_CELL_IDEAL;
-    const svgWidth = weeks * (cell + HEATMAP_GAP) - HEATMAP_GAP;
+    
+    // Fixed cell size, stretch gaps to fill container width
+    const cell = HEATMAP_CELL_IDEAL;
+    const totalCellWidth = weeks * cell;
+    const remainingWidth = Math.max(0, width - totalCellWidth);
+    const gap = weeks > 1 ? remainingWidth / (weeks - 1) : HEATMAP_GAP;
+    
+    const svgWidth = weeks * (cell + gap) - gap;
     const svgHeight = 7 * (cell + HEATMAP_GAP) - HEATMAP_GAP;
 
     svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
     svg.setAttribute('width', String(svgWidth));
     svg.setAttribute('height', String(svgHeight));
-    svg.style.width = `${svgWidth}px`;
-    svg.style.maxWidth = '100%';
+    svg.style.width = '100%';
     svg.style.height = `${svgHeight}px`;
 
     for (const { node, week, day } of cells) {
-      const x = week * (cell + HEATMAP_GAP);
+      const x = week * (cell + gap);
       const y = day * (cell + HEATMAP_GAP);
       node.setAttribute('x', String(x));
       node.setAttribute('y', String(y));
@@ -373,7 +375,7 @@ function renderHeatmapSection(dailyMap) {
     }
 
     for (const { span, weekIndex } of monthSpans) {
-      const x = weekIndex * (cell + HEATMAP_GAP) + cell / 2;
+      const x = weekIndex * (cell + gap) + cell / 2;
       span.style.left = `${x}px`;
       span.style.transform = 'translateX(-50%)';
     }
