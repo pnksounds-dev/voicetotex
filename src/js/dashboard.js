@@ -356,8 +356,12 @@ function renderHeatmapSection(dailyMap) {
     const remainingWidth = Math.max(0, width - totalCellWidth);
     const gap = weeks > 1 ? remainingWidth / (weeks - 1) : HEATMAP_GAP;
     
-    const svgWidth = weeks * (cell + gap) - gap;
-    const svgHeight = 7 * (cell + HEATMAP_GAP) - HEATMAP_GAP;
+    // Instead of stretching the entire SVG with viewBox scaling, we compute the exact pixel width needed.
+    // The width is weeks * cell + (weeks - 1) * gap. 
+    // Wait, the gap stretches to fill the container width exactly.
+    // So the total width is simply `width` if weeks > 1 and it exceeds min size.
+    const svgWidth = weeks > 1 ? width : weeks * cell;
+    const svgHeight = 7 * cell + 6 * HEATMAP_GAP; // Height is always fixed (7 cells + 6 gaps)
 
     svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
     svg.setAttribute('width', String(svgWidth));
