@@ -2204,8 +2204,7 @@ body[data-state="loading"] .loading-overlay {
 .heatmap-wrap {
   display: flex;
   gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  width: 100%;
 }
 
 .heatmap-day-labels {
