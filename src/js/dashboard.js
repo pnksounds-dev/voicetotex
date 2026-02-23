@@ -1,6 +1,6 @@
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const HEATMAP_GAP = 3;
+const HEATMAP_GAP = 2;
 const HEATMAP_CELL_MIN = 9;
 const HEATMAP_CELL_MAX = 14;
 const HEATMAP_CELL_IDEAL = 11;
@@ -306,8 +306,9 @@ function renderHeatmapSection(dailyMap) {
       }
 
       const cell = document.createElementNS(SVG_NS, 'rect');
-      cell.setAttribute('rx', '3');
-      cell.setAttribute('ry', '3');
+      cell.setAttribute('rx', '2');
+      cell.setAttribute('ry', '2');
+      cell.classList.add('heatmap-cell');
       cell.setAttribute('fill', (() => {
         if (count <= 0) return palette[0];
         if (count <= 2) return palette[1];
@@ -318,7 +319,7 @@ function renderHeatmapSection(dailyMap) {
       cell.setAttribute('data-date', dateKey);
       cell.setAttribute('data-count', String(count));
       const tooltip = document.createElementNS(SVG_NS, 'title');
-      tooltip.textContent = `${count} transcriptions on ${dateKey}`;
+      tooltip.textContent = `${count} transcription${count !== 1 ? 's' : ''} on ${dateKey}`;
       cell.appendChild(tooltip);
       svg.appendChild(cell);
       cells.push({ node: cell, week, day, weeks, count, dateKey });

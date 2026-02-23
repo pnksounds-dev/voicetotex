@@ -2252,6 +2252,7 @@ body[data-state="loading"] .loading-overlay {
 .heatmap-nav-label {
   font-size: 0.8rem;
   color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .heatmap-tooltip {
@@ -2281,6 +2282,23 @@ body[data-state="loading"] .loading-overlay {
   font-size: 0.65rem;
   color: var(--text-disabled);
   min-width: 14px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.heatmap-month-labels {
+  position: relative;
+  height: 16px;
+  margin-bottom: 2px;
+}
+
+.heatmap-month-label {
+  position: absolute;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  transition: opacity 0.2s ease;
 }
 
 .heatmap-content {
@@ -2292,6 +2310,14 @@ body[data-state="loading"] .loading-overlay {
   min-width: 0;
 }
 
+.heatmap-cell {
+  transition: fill 0.15s ease;
+}
+
+.heatmap-cell:hover {
+  filter: brightness(1.15);
+}
+
 .heatmap-month-labels {
   position: relative;
   height: 16px;
@@ -2300,8 +2326,11 @@ body[data-state="loading"] .loading-overlay {
 
 .heatmap-month-label {
   position: absolute;
-  font-size: 0.65rem;
-  color: var(--text-disabled);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  transition: opacity 0.2s ease;
   white-space: nowrap;
 }
 
